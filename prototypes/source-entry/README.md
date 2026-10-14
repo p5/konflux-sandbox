@@ -10,6 +10,8 @@ make -C prototypes/source-entry run
 ```
 
 The command needs the sibling `build-service` and `pipelines-as-code` clones.
+The default transport assertion expects the locally fixed Build Service revision recorded in experiment 008.
+With original revision ab6a21c, add BUILD_SERVICE_TRANSPORT_EXPECTATION=nil to reproduce its known reporting gap.
 It also needs Go 1.27.1 or later, Node, jq, ripgrep, kubectl, and the dedicated prototype cluster.
 Build commands can download pinned Go dependencies.
 

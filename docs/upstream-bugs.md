@@ -77,7 +77,13 @@ make -C prototypes/source-entry build-service
 This target uses actual upstream functions with an in-memory Kubernetes client and a loopback HTTP fixture.
 It requires no cluster, GitHub App, provider credentials, or GitHub API actions.
 Inspect the `actual-trigger-connection-refused` record for `deliverySucceeded:false` and `methodError:null`.
-The prototype currently asserts the buggy behavior; update that assertion after a fix.
+The original prototype asserted the buggy behavior.
+The current harness expects a transport error by default.
+With the original revision, use BUILD_SERVICE_TRANSPORT_EXPECTATION=nil to reproduce the historical failure.
+
+The background fix on local branch fix/pac-trigger-transport-error uses commit 684936c825d359d8106fa950bb3fab594ea7a00c.
+The replay verified that TriggerPaCBuild returns an error and preserves ECONNREFUSED through errors.Is.
+This records local verification only; upstream merge status remains unverified.
 
 Evidence: [source-entry report](experiments/008-source-entry.md#observed-transport-reporting-gap).
 Local capture: `.prototype-results/source-entry/build-service.jsonl`.

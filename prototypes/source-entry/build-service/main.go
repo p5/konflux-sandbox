@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"syscall"
 
 	comp "github.com/konflux-ci/application-api/api/konflux/v1alpha1"
 	controllers "github.com/konflux-ci/build-service/internal/controller"
@@ -106,7 +107,17 @@ func main() {
 	emit(map[string]any{"scenario": "actual-trigger-post-to-local-denial-fixture", "payload": captured, "error": err.Error(), "receiver": "local HTTP fixture; not PaC authorization", "credentialsCreated": false})
 	server.Close()
 	err = r.TriggerPaCBuild(ctx, c, "main", "main", server.URL, &core.Secret{Data: map[string][]byte{}}, repo)
-	require(err == nil, "upstream transport-error behavior changed")
-	emit(map[string]any{"scenario": "actual-trigger-connection-refused", "methodError": err, "deliverySucceeded": false, "upstreamReturnsNilOnTransportError": true, "endpoint": server.URL, "interpretation": "observed reporting gap; not a successful build"})
+	expectation := os.Getenv("BUILD_SERVICE_TRANSPORT_EXPECTATION")
+	if expectation == "nil" {
+		require(err == nil, "historical transport reporting gap changed")
+	} else {
+		require(expectation == "" || expectation == "error", "unsupported transport expectation")
+		require(errors.Is(err, syscall.ECONNREFUSED), "transport failure must preserve connection refusal")
+	}
+	var message any
+	if err != nil {
+		message = err.Error()
+	}
+	emit(map[string]any{"scenario": "actual-trigger-connection-refused", "methodError": message, "deliverySucceeded": false, "upstreamReturnsNilOnTransportError": err == nil, "endpoint": server.URL, "transportExpectation": expectation})
 	fmt.Println("PASS source-entry Build Service scenarios; actual controller code with in-memory Kubernetes state, no GitHub API actions")
 }

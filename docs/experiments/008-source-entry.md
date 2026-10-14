@@ -105,7 +105,13 @@ This is a failed delivery, not a successful build.
 Current source logs the POST error and executes `return nil` at [component_build_controller_pac.go](https://github.com/konflux-ci/build-service/blob/ab6a21c3186fef99888269756ae8c36ad0155b38/internal/controller/component_build_controller_pac.go#L354-L357).
 The relevant block starts at line 354 in the inspected revision.
 An upstream fix should return the transport error and preserve retry visibility.
-The prototype asserts the current behavior so the evidence remains explicit.
+The original prototype asserted that behavior so the historical evidence remains explicit.
+
+The later replay used local fix 684936c825d359d8106fa950bb3fab594ea7a00c on branch fix/pac-trigger-transport-error.
+The fixed function returned an error that preserved ECONNREFUSED through errors.Is.
+The harness now expects that corrected behavior by default.
+With the original source revision, set BUILD_SERVICE_TRANSPORT_EXPECTATION=nil to reproduce the historical reporting gap.
+This local fix does not establish upstream merge status.
 
 ## Actual PaC resolver and incoming parser
 

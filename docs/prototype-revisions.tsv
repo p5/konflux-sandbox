@@ -1,7 +1,8 @@
 directory	origin	branch	commit	worktree
 agent-sandbox	https://github.com/kubernetes-sigs/agent-sandbox.git	main	5d7608a9fca5aa1d3a12b73fb51ed2ee0d4e9ab1	clean
 architecture	https://github.com/konflux-ci/architecture.git	main	a51babeeae47f69f4cba98505b4d5dd66a2c73a6	clean
-build-service	https://github.com/konflux-ci/build-service.git	main	ab6a21c3186fef99888269756ae8c36ad0155b38	clean
+build-service	https://github.com/konflux-ci/build-service.git	main	ab6a21c3186fef99888269756ae8c36ad0155b38	original inspected baseline
+build-service	https://github.com/konflux-ci/build-service.git	fix/pac-trigger-transport-error	684936c825d359d8106fa950bb3fab594ea7a00c	clean local background fix; final replay
 build-trusted-artifacts	https://github.com/konflux-ci/build-trusted-artifacts.git	main	dbbc7016f5867e204ced75a64a8ce3668723067d	clean
 conforma-cli	https://github.com/conforma/cli.git	main	d7152fd908654fd34e92f2d9cc4e2ee245f1d464	clean
 conforma-policy	https://github.com/conforma/policy.git	main	13bc0cd118e1f53be6bd48222e24b99d36a0f30e	clean
