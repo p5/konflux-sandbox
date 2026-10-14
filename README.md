@@ -1,19 +1,23 @@
 # Konflux Sandbox
 
-Konflux Sandbox is a proposed extension for isolated checks, developer workspaces, and vulnerability investigations.
-Each workflow uses one sandbox execution contract.
+Konflux Sandbox is a proposed shared sandbox foundation for Konflux.
+External services use its interfaces to build checks, developer workspaces, vulnerability discovery, and vulnerability investigation.
+The foundation supplies isolation, lifecycle, a domain and IP firewall, credentials, artifact transport, and execution evidence.
+External services own their product controllers and domain logic.
 Konflux supplies workflow orchestration, artifact transport, policy evaluation, and release integration.
 
 Status: executable architecture prototypes. The production extension remains unimplemented.
 
 ## Start here
 
+- Read the [foundation requirements](docs/requirements.md) for the current scope and firewall requirements.
 - Read the [implementation plan](docs/implementation-plan.md) for milestones and acceptance criteria.
 - Read the [architecture](docs/architecture.md) for module responsibilities and execution guarantees.
 - Read the [prototype plan](docs/prototypes.md) for experiments that resolve architecture decisions.
 - Read the [prototype findings](docs/prototype-findings.md) for observed integration behavior and implementation decisions.
 
-The first deliverable runs one check against an immutable export of a local working tree.
+The first deliverable runs a bounded command against immutable source through a minimal execution client.
+It enforces domain and IP allowlists outside the guest.
 It returns structured results and destroys the execution environment.
 Repository credentials and model credentials stay outside the guest.
 
@@ -36,8 +40,9 @@ Start with one Kubernetes backend and an existing VM runtime.
 Evaluate Agent Sandbox for lifecycle management during the compatibility milestone.
 Add credential access through a separate broker after the first check works without upstream credentials.
 
-Workspace sessions and vulnerability workflows follow the same execution implementation.
-Full VM restoration, warm snapshots, and check-result reuse follow later milestones.
+External workspace and vulnerability services use the same foundation contract.
+Full VM restoration and warm snapshots follow later milestones.
+Consumers own any check-result reuse policy.
 
 ## Repository structure
 

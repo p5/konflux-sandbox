@@ -1,339 +1,227 @@
-# Konflux Sandbox implementation plan
+# Konflux Sandbox foundation implementation plan
 
 Date: 14 October 2026.
 
-Build an optional Konflux extension around one sandbox execution contract.
-Deliver an isolated check before interactive workspaces or vulnerability automation.
-Use that check to establish source identity, execution policy, results, and cleanup.
+Build a shared sandbox foundation that external services use for checks, workspaces, discovery, and investigation.
+The [requirements](requirements.md) define the current scope.
+The [architecture](architecture.md) defines module responsibilities and execution guarantees.
+External services own product controllers, user interfaces, agent reasoning, findings, patches, review, and publication decisions.
 
-The [architecture](architecture.md) defines the shared contract and module responsibilities.
-The resource names below are provisional.
+## Prototype baseline
 
-## Architecture prototypes
+The [prototype findings](prototype-findings.md) record actual Konflux, Tekton, Agent Sandbox, Kata, artifact, policy, and Results behavior.
+The [aggregate replay](experiments/010-aggregate-replay.md) completed successfully on the two dedicated Kind clusters.
+Those experiments support native VM TaskRuns for finite execution and Agent Sandbox for session lifecycle.
+The runtime choices remain subject to a supported compatibility contract.
 
-The [prototype plan](prototypes.md) defines six bounded experiments and the decisions they inform.
-Start with platform dispatch, execution recovery, and source identity before broad implementation.
-Evaluate checkpoint semantics during runtime selection, even though full restoration follows the first deliverable.
+The network experiment demonstrated one direct Pod IP restriction.
+It did not establish domain allowlists, DNS rebinding protection, IPv6 coverage, or complete bypass prevention.
+Domain and IP firewall enforcement is a required first-release capability.
+Select its implementation and demonstrate its guarantees before claiming a supported foundation profile.
 
-Use Kind for operator and Tekton integration.
-The [runtime experiment](experiments/004-runtime-lifecycle.md) demonstrated real Kata execution and tested network restrictions in a separate Kind cluster.
-Use its direct VM TaskRun path for the first finite check unless another requirement needs remote dispatch.
-Keep all prototype execution local through Makefile targets.
-The [first Kind experiment](experiments/001-kind-operator.md) records the existing platform baseline and its installation dependencies.
+The investigation prototype remains a consumer example that informed execution and evidence requirements.
+Its existence does not add a vulnerability product to this repository's scope.
 
 ## First working deliverable
 
-A developer submits a local working tree and selects an approved check definition.
-The extension exports immutable source and starts a Tekton workflow.
-A native Tekton TaskRun requests a fresh guest through an approved RuntimeClass.
-The check runs inside that guest.
-The developer receives a structured verdict, log references, output digests, and cleanup status.
-
-The first check uses a small fixture with all dependencies in a pinned environment image.
-It needs no model, repository write access, or network access to package registries.
-Trusted transport imports source and exports results without exposing registry credentials to the guest.
+A minimal client submits immutable source, an approved command definition, and an authorized execution profile.
+The foundation records an attempt and starts a bounded command in a fresh VM guest.
+It enforces domain and IP allowlists outside the guest.
+It returns execution results, diagnostic references, artifact identities, enforcement evidence, and cleanup status.
+A small check fixture demonstrates the interface.
+External services can build check products against the same interface.
 
 Acceptance requires these outcomes:
 
-- A passing fixture returns a passing verdict.
-- A changed fixture returns a failing verdict with bounded diagnostic output.
-- The receipt identifies the exact source, check definition, environment, and execution profile.
-- The guest has no upstream credentials or Kubernetes API token.
-- A forbidden connection fails under the selected profile.
-- Cancellation and deadline expiry stop the guest workload.
+- Passing and failing commands return distinct outcomes with bounded diagnostic output.
+- The receipt identifies the source, command definition, environment, execution profile, policy revision, owner, and attempt.
+- The guest receives no upstream credentials or general Kubernetes API token.
+- Approved domain and IP destinations work only on authorized ports and protocols.
+- Unapproved destinations, protected destinations, and tested domain bypass paths fail.
+- Firewall readiness gates command start, and enforcement failure stops affected network access.
+- Policy revocation stops new connections and terminates existing connections within a documented bound.
+- Cancellation and deadline expiry stop the workload.
 - Cleanup removes execution resources and temporary storage according to the retention policy.
-- Controller recovery does not silently repeat an uncertain command.
-- The check does not enter automatic Snapshot or release processing.
+- Controller recovery adopts known resources and records uncertain execution without implicit command repetition.
+- Exploratory executions do not automatically create release Snapshots or enter release processing.
+- Another service can submit, observe, cancel, and retrieve evidence through the documented interface.
 
-This deliverable includes milestones M0 through M3.
-Credential access begins in M4.
-Confidential vulnerability workloads require the additional controls in M7.
+The first deliverable includes M0 through M3.
+M4 adds credential grants.
+M5 adds reusable session capabilities.
+Consumer products remain outside these milestones.
 
-## Local verification
+## Milestones
 
-Run repository tests locally through a Makefile, as AGENTS.md requires.
-Do not add repository CI workflows.
-The product's Tekton tasks are separate from repository test automation.
-
-Add these targets with the implementation they verify:
-
-| Planned target | Scope | Required environment |
+| Milestone | Foundation deliverable | Completion evidence |
 | --- | --- | --- |
-| make test | Source identity, state transitions, authorization, and adapter contracts | Local development tools |
-| make test-integration | Resource admission, reconciliation, and recorded child ownership | Local Kubernetes API environment |
-| make test-conformance | Actual VM isolation, network restrictions, cancellation, and cleanup | Explicitly selected VM runtime and cluster |
-| make demo-check | First working deliverable with passing and failing fixtures | Extension, Tekton, artifact storage, and supported backend |
+| M0 | Runtime, firewall, transport, and dependency decisions | Exact versions, enforcement guarantees, deployment requirements, and actual compatibility evidence |
+| M1 | Source identity, execution contract, profiles, and durable state | Immutable requests, owner authorization, explicit outcomes, attempt identity, and receipt schema |
+| M2 | VM execution and outbound firewall | Source import, bounded commands, domain and IP enforcement, cancellation, deadlines, and cleanup |
+| M3 | Konflux integration and minimal client | Complete first deliverable through documented interfaces and a native VM TaskRun |
+| M4 | Credential broker | Scoped operations, execution identity, revocation, budgets, and exclusion of upstream credentials from guests |
+| M5 | Session capabilities | Authorized attachment, command streaming, terminals, persistent files, export, and explicit restoration capabilities |
+| M6 | Consumer integration contract | Client interfaces, capability discovery, compatibility documentation, and small external-service examples |
+| M7 | Production hardening | Private evidence, audit, retention, issuer authority, failure recovery, and profile conformance |
+| M8 | Optimization and upstream integration | Safe warm state, demonstrated checkpoint semantics, optional operator integration, and separate upstream contributions |
 
-Document each target's prerequisites and cleanup behavior.
-Require explicit cluster selection for targets that create runtime resources.
-Keep mock results separate from actual isolation evidence.
+## M0 Select supported implementations
 
-## Milestone sequence
+Record the VM runtime, CNI, firewall implementation, storage driver, and served API versions.
+Pin compatible Agent Sandbox, Tekton, Kubernetes clients, and controller-runtime versions.
+Use supported interfaces instead of imports from Konflux controller internals.
 
-| Milestone | Deliverable | Dependency | Completion evidence |
-| --- | --- | --- | --- |
-| M0 | Backend compatibility decision | Planning documents | Recorded versions, transport choice, hardware requirements, and runtime demonstration |
-| M1 | Source identity and execution contract | M0 | Canonical source fixtures, immutable requests, explicit outcomes, and ownership rules |
-| M2 | One isolated execution backend | M1 | Fresh guest execution, enforced profile, bounded results, cancellation, and cleanup |
-| M3 | Tekton execution and check submission | M2 | Complete first deliverable through a CLI and Tekton PipelineRun |
-| M4 | Credential broker | M3 | Restricted operations, execution identity, revocation, and secret exclusion |
-| M5 | Workspace sessions | M4 | Authorized attach, persistent files, export, and check submission |
-| M6 | One discovery adapter | M4 | Bounded campaign, structured findings, private evidence, and budget enforcement |
-| M7 | Investigation and candidate promotion | M6 | Independent reproduction, candidate validation, review, and normal Konflux build handoff |
-| M8 | Runtime optimization and upstream integration | Relevant earlier milestones | Proven checkpoint semantics, safe warm state, compatibility matrix, and separate upstream changes |
+Select the firewall's deployment model before implementing its adapter.
+Evaluate how domain rules authorize names, resolve addresses, handle shared IPs, and restrict supported protocols.
+Record how enforcement covers native TaskRuns, sessions, broker operations, IPv4, and IPv6.
+Define protected destination precedence, policy readiness, DNS expiry, revocation bounds, and failure behavior.
+Keep enforcement outside untrusted guests.
 
-M5 and M6 can proceed independently after M4.
-Each milestone produces a usable capability or a concrete compatibility decision.
+Record required cluster privileges and any CNI or routing dependencies.
+Reject profiles whose enforcement guarantees the installed implementation cannot provide.
+Do not infer enforcement from configuration objects alone.
 
-## M0 Establish the backend and dependency baseline
+Select an authenticated transport for command, file, terminal, and log traffic.
+The runtime experiment records Kata's direct port-forward limitation and the local TCP proxy workaround.
+Production transport needs authenticated encryption and destination identity across guest replacement.
 
-Evaluate one Kubernetes backend with an existing VM runtime.
-Use Agent Sandbox as the initial lifecycle candidate.
-Record an alternative if it cannot meet the required execution contract.
-Keep a mock backend for controller development.
-Do not use a mock backend as isolation evidence.
+Select the extension API group and project license before the first implementation release.
 
-Complete these tasks:
+## M1 Define foundation contracts
 
-1. Select a Kubernetes or OpenShift environment with suitable virtualization hardware.
-2. Record the VM runtime, CNI, storage driver, and installed API versions.
-3. Pin compatible Agent Sandbox, Tekton, Kubernetes client, and controller-runtime versions.
-4. Demonstrate guest creation, command execution, file transfer, and deletion.
-5. Select an authenticated transport for the guest agent.
-6. Confirm that network policy blocks direct bypass and cloud metadata access.
-7. Record the installation method and minimum cluster permissions.
-8. Select the extension API group and project license before the first implementation release.
+Define the minimum durable execution request and administrator-controlled execution profile.
+Use the recovery prototype to choose an owned PipelineRun or a provisional execution resource.
+Keep product resources such as WorkspaceSession, SecurityCampaign, and SecurityInvestigation in consumer repositories.
 
-The inspected Agent Sandbox and Konflux repositories use different Kubernetes client and controller-runtime versions.
-Those library versions do not establish server compatibility.
-Avoid dependencies on Konflux controller internals.
-Validate the chosen served APIs and client combination explicitly.
+A request identifies immutable source, approved command definition, environment, profile, owner, request identifier, limits, and deadline.
+The controller records resolved identities before execution.
+An admitted request cannot expand its inputs or authority.
+Each explicit retry receives a new attempt identity.
 
-The inspected Agent Sandbox SDK warns about direct sandboxd Pod port-forward access with Kata and gVisor.
-Evaluate service-based connectivity with per-execution authentication.
-A Service address alone does not authenticate the destination guest.
+Separate execution outcome, infrastructure outcome, and cleanup status.
+Record unknown outcomes when dispatch acknowledgement or result delivery is uncertain.
+Repeated reconciliation must adopt the same owned child resources.
+An orphan reconciler must remove expired resources after controller failure.
 
-Agent Sandbox suspension currently deletes its backing Pod.
-Record file persistence separately from process or VM restoration.
-Full memory restoration is outside the first deliverable.
+Define canonical source selection, filesystem metadata, confined import, output export, and bounded artifact formats.
+Keep Git revisions as context until the foundation verifies their exact relationship to source bytes.
+Define receipt fields and separate supervisor observations from guest-reported output.
 
-Output: a backend decision with exact versions and demonstrated capabilities.
-M0 blocks claims of a supported isolated backend until that evidence exists.
+Expose capability information for finite execution, sessions, storage, firewall features, and restoration semantics.
+Consumers must detect unsupported operations before execution.
 
-## M1 Define inputs and execution state
+## M2 Implement VM execution and firewall enforcement
 
-Use Go and controller-runtime for the controller implementation.
-Select the supported Go release when scaffolding starts.
-Keep the runtime adapter behind the execution interface.
-Start with one real adapter.
+Allocate fresh guests from approved pinned environments.
+Keep source scripts and target programs inside the guest.
+Keep trusted control, artifact transport credentials, signing authority, and enforcement outside it.
 
-Define an administrator-controlled ExecutionProfile and the minimum durable execution request.
-Use the recovery prototype to choose an owned PipelineRun or a provisional SandboxExecution resource.
-Keep CheckRun, WorkspaceSession, SecurityCampaign, and SecurityInvestigation schemas outside this milestone.
-Add each resource when its lifecycle needs durable state beyond existing resources.
+Implement allocation, source import, command execution, bounded output, export, cancellation, and destruction.
+Bind runtime resources and firewall state to the execution attempt.
+Require enforcement readiness before untrusted commands start.
 
-The execution request contains:
+Implement the domain and IP firewall requirements from the requirements document.
+Test allowed and forbidden domains, IPs, CIDRs, ports, and protocols.
+Include controlled DNS, address expiry, rebinding, shared addresses, direct IP attempts, redirects, alternate resolvers, and protected destinations.
+Cover IPv6 or disable it explicitly before admission.
+Verify revocation against existing connections as well as new connections.
+Verify enforcement failure and controller restart behavior.
 
-- An immutable source reference and canonical source digest.
-- A pinned check definition and environment identity.
-- An approved execution profile reference.
-- Resource limits, an absolute deadline, and output limits.
-- An authenticated owner and a caller request identifier.
+The first profile can restrict network access to fixture destinations and required control or artifact transport paths.
+It must still demonstrate domain and IP rule semantics.
+A broad outbound allow rule cannot substitute for domain enforcement.
 
-The controller resolves configuration once and records the resolved identities.
-Execution parameters become immutable after admission.
-The client cannot select arbitrary Kubernetes service accounts, host mounts, secrets, or execution templates.
+## M3 Expose the first foundation interface
 
-Define explicit outcomes for success, check failure, infrastructure failure, cancellation, timeout, and unknown execution outcome.
-Track cleanup independently from the check verdict.
-A successful check with incomplete cleanup remains operationally incomplete.
+Add one versioned native VM task and a minimal execution client.
+The client imports source, submits execution, observes results, cancels execution, and retrieves evidence.
+Another service must be able to use the same interface without constructing backend Pods or firewall resources.
+Add remote dispatch only when a supported execution path requires it.
 
-Use deterministic child resource identity for repeated reconciliation.
-Record a separate attempt for each explicit retry.
-If dispatch outcome is uncertain, record that uncertainty and stop the attempt.
-Do not claim exactly-once command execution across an unrecorded dispatch failure.
+Preserve native Tekton step and result mechanics where compatibility evidence supports them.
+Keep arbitrary TaskSpec translation outside the first deliverable.
+Use separate labels and workflow definitions for exploratory execution.
+Keep promotion into ordinary Konflux builds and releases under consumer authorization.
 
-For source export, include tracked files and explicitly selected untracked files.
-Exclude Git internals, sockets, device files, and configured sensitive paths.
-Define stable path ordering, file modes, symlink rules, size limits, and metadata normalization.
-Compute identity over a canonical manifest.
-Keep a Git revision as context until the extension verifies an exact source relationship.
+Expose artifact references, Results references, and execution evidence through documented contracts.
+Configure log storage separately before promising archived logs.
+Install the foundation through standalone manifests with scoped RBAC and explicit dependencies.
 
-Output: resource schemas, state transitions, canonical source format, and receipt format.
-Define verification fixtures for archive traversal, symlink escape, source changes, and oversized inputs.
-
-## M2 Implement isolated execution
-
-Create fresh guests from a pinned approved environment.
-Run source processing and check commands inside the guest.
-Keep the execution controller and trusted artifact transport outside it.
-
-Implement these capabilities through the execution interface:
-
-- Admission with an authorized profile and bounded resources.
-- Guest allocation and authenticated connection.
-- Confined source import and output export.
-- Command execution with bounded logs and an explicit exit result.
-- Deadline enforcement and cancellation.
-- Trusted execution metadata and cleanup status.
-
-The initial profile denies general outbound network access.
-Permit only the specific transport paths required by the implementation.
-Enforce those paths outside the guest.
-Block metadata endpoints, unrelated cluster services, host access, and cross-execution access.
-
-The controller checks runtime and enforcement readiness before admission.
-If enforcement is unavailable, reject execution.
-Do not fall back to a weaker runtime.
-
-Keep the guest agent as a command and file transport.
-Its reported test results remain untrusted workload output.
-The external supervisor records guest identity, runtime configuration, policy readiness, and resource lifecycle.
-Do not present requested configuration as independent proof of every runtime property.
-
-Define the conformance workloads for lifecycle failures, authorization failures, and network bypass attempts.
-Record which properties require external runtime evidence.
-
-## M3 Integrate Tekton and a local client
-
-Add a versioned native VM check pipeline under tasks/.
-Reuse ordinary task steps and results where the runtime experiment established compatibility.
-Add a dispatch task only for an execution path that needs the remote interface.
-The dispatch task forwards cancellation and uses a bounded deadline.
-Its credentials authorize only the required extension operations.
-
-Start with one explicitly supported check shape.
-Do not translate arbitrary Tekton TaskSpecs in this milestone.
-Add support for step images, sidecars, workspaces, and result semantics through separate compatibility work.
-
-Add a CLI that exports source, submits a check, observes progress, and cancels execution.
-Use the same execution interface for the CLI and Tekton adapter.
-Keep shell streaming outside Kubernetes status fields.
-
-Use extension-specific labels and workflow definitions.
-Do not mark exploratory PipelineRuns as normal Konflux builds.
-Confirm that existing Snapshot predicates do not select these runs.
-
-Install the extension through standalone Kustomize manifests.
-Document required dependencies and supported versions.
-Keep Konflux operator integration for a later milestone.
-
-Complete the first deliverable with passing, failing, cancelled, timed-out, and recovery scenarios.
-Store the resulting execution evidence and compatibility record.
-
-## M4 Add the credential broker
+## M4 Add scoped credential operations
 
 Deploy the broker with separate service accounts, permissions, and upstream credentials.
-Give execution guests only the identity needed to request an authorized operation.
-Bind grants to the execution UID, owner, destination, operation, deadline, and budget.
+Bind grants to execution identity, owner, destination, operation, deadline, and budget.
+Expose grant creation and revocation only to authorized callers.
+Guests receive only the scoped identity required to request permitted operations.
 
-Start with one model proxy operation and one fixed artifact destination.
-Add repository fetch and publication operations separately.
-Use Octo STS where GitHub federation meets the required trust policy.
+Validate destinations, redirects, methods, and provider-specific operation scope before credential injection.
+Apply destination policy to broker-originated traffic.
+Revoke grants after cancellation, completion, expiry, or owner removal.
+Keep credentials out of guest files, environment, process memory, logs, and receipts.
+Consumer services own model selection, reasoning loops, repository publication, and product budget policy.
 
-Reject credential selection supplied by a guest.
-Validate redirects, destination changes, request methods, and repository scope.
-Prevent direct network bypass around the broker.
-Revoke grants on cancellation, completion, expiry, and owner removal.
+## M5 Expose session capabilities
 
-Keep upstream credentials out of guest files, environment variables, process memory, logs, and receipts.
-An allowed model destination can still receive source data.
-Profile authorization must cover that disclosure as well as credential access.
+Expose authorized command streaming, terminal attachment, file transfer, persistent files, and source export.
+Reuse the shared profile, firewall, credential, identity, and evidence implementation.
+Keep repository association, editor integration, workspace interfaces, and product session workflows in consumer services.
 
-## M5 Add workspace sessions
+Record file persistence separately from process and VM memory restoration.
+Expose restoration only through a capability that the selected runtime demonstrates.
+Recheck authorization and firewall readiness when resuming a session.
 
-Reuse the execution backend and profile enforcement.
-Add owner authorization, repository association, interactive access, file persistence, and source export.
-Run authoritative checks against immutable exports in fresh guests.
+## M6 Define consumer integration
 
-Start with file persistence and explicit process restart.
-Expose process restoration only when the backend supports and demonstrates it.
-Do not label file persistence as a full VM checkpoint.
+Document submission, observation, cancellation, attachment, artifact, evidence, grant, and capability interfaces.
+Publish client libraries only where they reduce repeated integration work.
+Keep wire contracts versioned and document supported compatibility combinations.
 
-## M6 Add one bounded discovery adapter
+Provide small finite-command and interactive-session examples.
+Use fixtures instead of implementing workspace or vulnerability products.
+Consumers own baseline comparison, finding classification, exploit reproduction, patch validation, review, and publication decisions.
+The foundation supplies the isolated execution and evidence those decisions require.
 
-Start with OSS-Fuzz-gen or another approved harness for a small source target.
-Pin the harness and tool images.
-Define target scope, compute limits, model limits, deadline, and finding schema.
-Keep generated commands, target code, and any nested container daemon inside approved isolation.
-Do not expose the host Docker socket.
+## M7 Harden foundation guarantees
 
-The campaign controller owns admission, attempts, budgets, cancellation, and finding collection.
-The harness owns its inner reasoning and fuzzing loop.
-Only one module owns retries for each recorded attempt.
+Implement private artifact and log access, retention, audit, issuer authority, and key lifecycle.
+Keep sensitive workload details outside public Kubernetes events and public build status.
+Verify cross-owner denial, resource exhaustion, partial cleanup, controller restart, and enforcement failure.
+Document precisely which supervisor observations each receipt supports.
+Use existing Konflux signing, policy, and archive interfaces where their trust contracts fit.
 
-Store source, crashes, reproduction inputs, logs, and model traces in private storage.
-Keep sensitive details outside Kubernetes events and public CI status.
+## M8 Optimize and contribute upstream
 
-## M7 Add investigation and promotion
+Add warm environments only after input, profile, and execution identity contracts are stable.
+Do not reuse mutated tenant state as a shared base.
+Bind warm state to approved environment, dependency, policy, and tenant identities.
 
-Establish a baseline before patch generation.
-Reproduce each finding in a fresh validation guest.
-Validate the same reproduction input against each candidate.
-Compare regression results with the baseline.
-Record infrastructure failures as inconclusive.
+Add checkpoint capabilities with explicit ownership, encryption, expiry, authorization, and firewall restoration rules.
+Consumers own any policy for authoritative reuse of execution results.
 
-Group related findings and record target versions explicitly.
-Require an authorized review before publication or patch promotion.
-Publish an approved source candidate through the normal Git build path.
-Use existing Konflux build, integration, and release workflows for the final artifact.
-
-Extend Conforma policies for the required execution evidence.
-Keep the trusted receipt issuer and signing material outside guests.
-Keep confidential evidence outside public registries and transparency publication.
-
-## M8 Optimize execution and prepare upstream contributions
-
-Add warm environments only after source and execution identities have a stable contract.
-Bind warm state to environment, dependencies, profile, and tenant policy.
-Never reuse mutated tenant state as a shared base.
-Invalidate warm state after relevant tool, dependency, or policy changes.
-
-Add full process or VM checkpoints through an explicit backend capability.
-Define checkpoint encryption, ownership, expiry, and credential grant renewal.
-Recheck policy and authorization before restoration.
-
-Keep before-push verdicts advisory until equivalence rules support authoritative reuse.
-Those rules include source, check definitions, tools, dependencies, runtime, policy, target context, and freshness.
-
-Prepare separate upstream changes for reusable catalog tasks, operator installation, lifecycle improvements, and policy support.
-Each contribution needs a compatibility statement and evidence for its changed behavior.
+Prepare separate upstream changes for reusable tasks, optional operator integration, lifecycle improvements, and policy interfaces.
+Track unrelated upstream bugs in the [bug list](upstream-bugs.md).
 
 ## Planned code structure
 
 ```text
-api/                         Extension resources and generated schemas
-cmd/manager/                 Execution and workflow controllers
+api/                         Foundation resources and generated schemas
+cmd/manager/                 Execution and session lifecycle controllers
 cmd/broker/                  Credential broker
-cmd/ksbx/                    Local client
-internal/execution/          Execution state and lifecycle
-internal/backend/            Agent Sandbox adapter
+cmd/ksbx/                    Minimal execution client
+internal/execution/          Attempt state and resource lifecycle
+internal/backend/            Runtime and session adapters
+internal/firewall/           Resolved network policy and enforcement adapter
 internal/artifacts/          Canonical source and confined transport
-internal/evidence/           Receipts and trusted metadata
-internal/broker/             Grants and restricted operations
-internal/workspaces/         Workspace lifecycle
-internal/investigations/     Campaign and finding lifecycle
-tasks/                       Versioned Tekton check tasks and optional dispatch adapters
+internal/evidence/           Receipts and trusted observations
+internal/broker/             Grants and scoped operations
+client/                      Consumer integration interfaces
+tasks/                       Native VM tasks and optional dispatch adapters
 config/                      CRDs, RBAC, profiles, and installation
-examples/                    Bounded check and investigation fixtures
-docs/                        Architecture and compatibility records
+examples/                    Small consumer fixtures
 Makefile                     Local verification and demonstration targets
 ```
 
-Create directories as implementation requires them.
-Keep product workflows independent from backend-specific resource details.
-Use supported remote interfaces instead of imports from Konflux controller internals.
-
-## Immediate contribution sequence
-
-| Change | Scope | Completion condition |
-| --- | --- | --- |
-| Planning | README, architecture, implementation milestones | Reviewable scope and first deliverable |
-| Backend decision | Version matrix, runtime transport, environment requirements | M0 evidence resolves implementation dependencies |
-| Architecture prototypes | Platform dispatch, execution recovery, source identity, and checkpoint capability records | Experiments resolve the relevant contract questions |
-| Execution foundation | Go module, schemas, source identity, controller state | M1 contract supports one recorded attempt |
-| Isolated backend | Allocation, command transport, artifacts, cancellation, cleanup | M2 profile meets its required conformance checks |
-| First check | Tekton task, CLI, installation, fixture | M3 completes the first working deliverable |
-
-Keep each change on one topic.
-Record unresolved backend requirements before their dependent implementation starts.
+Create directories only when implementation requires them.
+Keep each contribution on one topic.
+Run all verification locally through Makefiles.
+Do not add repository CI workflows.

@@ -6,6 +6,10 @@ Executable prototypes cover the local source-entry, execution, artifact, integra
 The results support an optional Konflux extension with a shared execution contract.
 Native VM TaskRuns provide a smaller first implementation than a general remote task translator.
 
+The current [foundation requirements](requirements.md) limit implementation to shared execution capabilities for external product services.
+Workspace and vulnerability product controllers remain outside repository scope.
+The existing network experiment does not satisfy the new explicit domain and IP firewall contract.
+
 The [revision inventory](prototype-revisions.tsv) records the inspected source baseline.
 The experiment reports distinguish actual upstream behavior from proposed extension rules.
 The [aggregate replay](experiments/010-aggregate-replay.md) records the successful final sequence and resource checks.
@@ -172,6 +176,8 @@ Production work includes enforced profile admission, durable controllers, issuer
 Full process restoration, warm snapshot safety, and authoritative reuse of before-push results need separate implementation.
 
 The first production deliverable remains one immutable-source check with explicit identity, bounded execution, structured results, and verified cleanup.
+That check becomes a minimal foundation fixture rather than a product implementation.
+Its acceptance now also requires domain and IP firewall conformance.
 
 ## Resource ownership
 

@@ -4,6 +4,11 @@ Use small experiments to settle execution, recovery, source identity, credential
 Each prototype answers one question and records a decision.
 Prototype completion does not establish production readiness.
 
+The [foundation requirements](requirements.md) supersede earlier product implementation scope in this research plan.
+Workspace and investigation prototypes inform interfaces for external consumers.
+Their product logic remains outside this repository's implementation scope.
+Domain and IP firewall conformance remains an open prototype requirement beyond the existing direct Pod IP experiment.
+
 The [implementation plan](implementation-plan.md) defines the production milestones.
 
 ## Priority and decisions
@@ -15,7 +20,8 @@ The [implementation plan](implementation-plan.md) defines the production milesto
 | P3 Source and evidence | Can we identify and transport the exact working tree that a check consumes? | Canonical source format, transport, and receipt fields | Before M1 schemas become stable |
 | P4 Credential broker | Can an execution use one permitted operation without obtaining the upstream credential? | Broker grant format, execution authentication, and network enforcement | Before M4 |
 | P5 Checkpoint semantics | What state survives suspension on the selected runtime? | Runtime capabilities and workspace lifecycle | During M0 evaluation; implementation can follow M5 |
-| P6 Investigation workflow | Can the workflow distinguish a reproduced finding, a validated patch, and an inconclusive result? | Investigation states, evidence requirements, and review handoff | Before M6 and M7 schemas become stable |
+| P6 Investigation consumer | Can an external workflow distinguish a reproduced finding, a validated patch, and an inconclusive result? | Foundation evidence and consumer integration requirements | Research fixture only; product implementation remains external |
+| P7 Outbound firewall | Can guests reach only approved domains and IPs across supported protocols and policy changes? | Domain semantics, DNS handling, bypass prevention, enforcement readiness, and revocation | Required before M2 acceptance |
 
 Start P1, P2, and P3 before broad implementation.
 Use P5 early to identify runtime limits that affect later workspace requirements.
@@ -145,7 +151,7 @@ If the runtime only recreates a Pod, record that limit and its effect on workspa
 Complete the prototype when the runtime capability matrix distinguishes file persistence from process and VM restoration.
 Use that result before promising Chainguard-style suspension behavior.
 
-## P6 Investigation workflow
+## P6 Investigation consumer
 
 Use a deliberately vulnerable local fixture and a known patch.
 Use scripted actions before introducing a model or a complete discovery harness.
@@ -160,7 +166,31 @@ Check that an inconclusive result cannot become a successful remediation.
 Confirm that one module owns each attempt and publication action.
 
 Complete the prototype when the workflow can represent these outcomes without treating every agent tool call as a PipelineRun.
-Use the result to define campaign and investigation resources.
+Use the result to define evidence and execution requirements for external campaign and investigation services.
+
+## P7 Outbound firewall
+
+Select an enforcement candidate that supports the domain and IP contract in the [requirements](requirements.md).
+Run controlled allowed and forbidden destinations from ordinary containers and actual VM guests.
+Keep the destination fixtures local and use an explicitly controlled DNS server.
+
+Exercise these cases:
+
+- Exact domain and explicit wildcard matches, including unrelated names and parent domains.
+- Approved and forbidden IPs, CIDRs, ports, and supported protocols.
+- Shared destination IPs and the implementation's actual hostname guarantees.
+- DNS address changes, expiry, rebinding, and attempts through an unauthorized resolver.
+- Direct IP access and redirects that attempt to bypass domain restrictions.
+- Protected metadata, host, control-plane, cluster, and cross-execution destinations.
+- Equivalent IPv4 and IPv6 controls or verified IPv6 disablement.
+- Policy installation before command start and enforcement failure during execution.
+- Policy revocation during an established connection and before a new connection.
+- The same destination restrictions on broker-originated requests.
+
+Record supported semantics, enforcement readiness, rejected capabilities, revocation bounds, and audit evidence.
+Do not infer complete domain enforcement from a successful DNS lookup or a single blocked Pod IP.
+Complete the prototype when the selected implementation satisfies the first profile's documented firewall contract.
+Record any CNI, routing, proxy, privilege, or protocol dependencies before M2 implementation.
 
 ## Prototype execution and capture
 
@@ -178,6 +208,7 @@ make prototype-composed
 make prototype-dispatch
 make prototype-investigation
 make prototype-source-entry
+make prototype-results
 ```
 
 Keep prototype code on explicit prototype branches or isolated worktrees.

@@ -1,10 +1,11 @@
 # Konflux Sandbox architecture
 
-Konflux Sandbox adds isolated execution beside existing Konflux build, integration, and release workflows.
-Workspaces, checks, and vulnerability investigations share the execution implementation.
-Product controllers manage their distinct lifecycles.
+Konflux Sandbox supplies a shared execution foundation beside existing Konflux build, integration, and release workflows.
+External services build workspaces, checks, and vulnerability workflows through its interfaces.
+Those services own their product controllers and domain logic.
 
-The [implementation plan](implementation-plan.md) starts with one immutable-source check.
+The [requirements](requirements.md) define the foundation scope and explicit domain and IP firewall contract.
+The [implementation plan](implementation-plan.md) starts with a minimal immutable-source execution fixture.
 
 ## Architecture decisions
 
@@ -16,10 +17,11 @@ The [implementation plan](implementation-plan.md) starts with one immutable-sour
 | Workflow engine | Existing Tekton PipelineRuns for finite stages |
 | Execution backend | One Kubernetes adapter; Agent Sandbox is the initial candidate |
 | Isolation | Existing VM runtime with profile conformance evidence |
+| Outbound firewall | Default denial with domain, IP, CIDR, port, and protocol allowlists outside guests |
 | Credential authority | Separate broker deployment and permissions |
 | Artifact transport | OCI references and canonical source manifests |
-| Initial result authority | Advisory check results |
-| Final candidate release | Existing Konflux build and managed release workflows |
+| Result authority | Execution evidence; consumers decide verdict authority |
+| Consumer promotion | Existing Konflux build and managed release workflows |
 
 The [runtime experiment](experiments/004-runtime-lifecycle.md) demonstrated Agent Sandbox, Kata, direct Tekton execution, and OCI source consumption on this machine.
 The first implementation can use native VM TaskRuns for finite checks and Agent Sandbox for sessions.
@@ -45,33 +47,46 @@ One contract does not require one new VM lifecycle engine or one HTTP call for e
 
 ```mermaid
 flowchart TD
-    CLI[CLI and agent tools] --> CHECK[Check controller]
-    CLI --> WS[Workspace controller]
-    CHECK --> TEKTON[Native Tekton VM tasks]
-    WS --> BACKEND[Agent Sandbox lifecycle]
-    SEC[Investigation controller] --> TEKTON
-    PROFILE[Shared execution profiles and admission] --> TEKTON
-    PROFILE --> BACKEND
-    TEKTON --> VM[Approved VM runtime]
-    BACKEND --> VM
-    TEKTON -. optional .-> REMOTE[Remote dispatch adapter]
-    REMOTE --> VM
-    PROFILE --> GRANT[Broker grant management]
-    VM --> PROXY[Restricted broker operations]
-    GRANT --> PROXY
-    TEKTON --> ART[Artifact transport and external receipts]
-    BACKEND --> ART
-    ART --> POLICY[Conforma evaluation]
-    SEC --> PROMOTE[Approved source candidate]
-    PROMOTE --> KONFLUX[Normal Konflux build integration and release]
+    subgraph CONSUMERS[External product services]
+        CHECK[Checks]
+        WS[Workspaces]
+        SEC[Discovery and investigation]
+    end
+    subgraph FOUNDATION[Konflux Sandbox foundation]
+        CONTROL[Execution and session interfaces]
+        PROFILE[Shared profiles and admission]
+        TEKTON[Native Tekton VM tasks]
+        BACKEND[Agent Sandbox lifecycle]
+        VM[Approved VM runtime]
+        FIREWALL[Domain and IP firewall]
+        BROKER[Scoped credential broker]
+        ART[Artifacts results and execution evidence]
+        CONTROL --> PROFILE
+        PROFILE --> TEKTON
+        PROFILE --> BACKEND
+        TEKTON --> VM
+        BACKEND --> VM
+        PROFILE --> FIREWALL
+        PROFILE --> BROKER
+        VM --> FIREWALL
+        VM --> BROKER
+        BROKER --> FIREWALL
+        TEKTON --> ART
+        BACKEND --> ART
+    end
+    CHECK --> CONTROL
+    WS --> CONTROL
+    SEC --> CONTROL
+    FIREWALL --> DEST[Permitted destinations]
+    ART --> KONFLUX[Existing Konflux artifact result and policy interfaces]
 ```
 
 The execution module owns admission, resolved identity, deadlines, cancellation, artifacts, and resource cleanup.
 The backend adapter implements guest allocation and command transport.
 It does not choose the workload's authority.
 
-Product modules use the execution interface.
-They do not construct arbitrary backend Pods or duplicate network and credential policy.
+External product services use the execution interface.
+The foundation keeps backend resource management, firewall enforcement, and credential policy behind that interface.
 
 The broker owns upstream credentials and permitted external operations.
 Its permissions remain separate from execution guests and the installation controller.
@@ -89,7 +104,7 @@ Advertise checkpoint capabilities separately from ordinary execution.
 A request identifies:
 
 - The immutable source and canonical source manifest.
-- The approved check definition and environment.
+- The approved command definition and environment.
 - The selected profile and bounded resource request.
 - The authenticated owner, request identifier, and deadline.
 
@@ -97,7 +112,7 @@ The controller records resolved configuration before dispatch.
 An admitted request cannot change its inputs or authority.
 Changes require a new request or an explicit new attempt.
 
-The status separates check outcome, infrastructure outcome, and cleanup conditions.
+The status separates command outcome, infrastructure outcome, and cleanup conditions.
 Logs and evidence live in bounded artifact storage.
 Status fields contain references and short operational conditions.
 
@@ -152,6 +167,36 @@ It also blocks metadata endpoints, unrelated private networks, and other executi
 Document any permitted artifact or control transport path explicitly.
 Audit decisions outside the guest.
 
+## Outbound firewall
+
+The firewall is a required foundation capability.
+It denies workload egress by default and permits approved domains, IP addresses, CIDR ranges, ports, and protocols.
+It enforces resolved policy outside guests for both native TaskRuns and interactive sessions.
+Consumers can request authorized restrictions or revocation through the foundation interface.
+They cannot expand administrator permissions.
+
+Domain policy needs controlled DNS, address expiry, rebinding protection, and explicit wildcard semantics.
+The implementation must define hostname guarantees for shared IPs and each supported protocol.
+It must block unauthorized direct IP access, alternate DNS, redirects, and unsupported protocol paths.
+IPv6 needs equivalent enforcement or explicit disablement before admission.
+Protected destination rules cover metadata, hosts, control-plane endpoints, unrelated tenants, and unrelated cluster services.
+
+Policy readiness gates workload admission.
+Enforcement failure stops affected network access.
+Policy revocation must stop new connections and terminate established connections within a documented bound.
+The audit record binds decisions to execution identity and policy revision.
+Broker requests also need destination checks because a broker can otherwise bypass guest egress restrictions.
+
+The firewall implementation remains an open design decision.
+Standard NetworkPolicy provides IP, Pod, namespace, and port controls; its API does not express domain allowlists.
+Domain restrictions therefore need an additional enforcement implementation.
+Standard NetworkPolicy also leaves the effect of policy changes on established connections to its enforcement implementation.
+Source: [Kubernetes NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/).
+
+Existing experiments demonstrated one direct Pod IP restriction with KindNet.
+They did not demonstrate domain filtering, rebinding protection, IPv6 restrictions, or complete bypass prevention.
+The first foundation release requires separate firewall conformance evidence.
+
 ## Source artifacts and evidence
 
 A source archive represents selected bytes and filesystem metadata.
@@ -165,7 +210,7 @@ Run source scripts and target programs inside the guest.
 An execution receipt binds these identities:
 
 - Request, attempt, owner, and guest instance.
-- Source manifest and check definition.
+- Source manifest and command definition.
 - Environment images and relevant dependencies.
 - Resolved profile, backend, runtime, and policy revision.
 - Start time, end time, outcome, output digests, and cleanup conditions.
@@ -187,8 +232,8 @@ The first installation adds controllers, resources, tasks, and execution profile
 It does not change required fields in existing Component, Snapshot, or Release resources.
 Existing pipeline credentials and execution behavior remain on their current paths.
 
-The first check uses a versioned native Tekton task and an approved VM RuntimeClass.
-Its contract covers one supported check shape.
+The first execution fixture uses a versioned native Tekton task and an approved VM RuntimeClass.
+Its contract covers one supported command shape.
 Remote dispatch needs a separate adapter when a workload requires another execution service.
 Any broader task support needs compatibility evidence for steps, sidecars, workspaces, and result files.
 
@@ -197,7 +242,7 @@ They do not claim to be normal signed builds or produce release Snapshots automa
 Approved candidates enter the normal build path through verified source publication.
 
 Trusted Artifact policy needs an explicit source-import producer contract.
-Before-push results remain advisory until equivalence and issuer rules permit authoritative reuse.
+Consumers own any authoritative verdict reuse and define its equivalence, freshness, and issuer rules.
 Shared execution across existing pipelines follows an optional migration with versioned tasks.
 
 ## Deferred capabilities
