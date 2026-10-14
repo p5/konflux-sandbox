@@ -8,11 +8,12 @@ Native VM TaskRuns provide a smaller first implementation than a general remote 
 
 The current [foundation requirements](requirements.md) limit implementation to shared execution capabilities for external product services.
 Workspace and vulnerability product controllers remain outside repository scope.
-The existing network experiment does not satisfy the new explicit domain and IP firewall contract.
+The new foundation experiments exercise domain and IP enforcement, real execution identity, durable recovery, private evidence, and external consumers.
 
 The [revision inventory](prototype-revisions.tsv) records the inspected source baseline.
 The experiment reports distinguish actual upstream behavior from proposed extension rules.
-The [aggregate replay](experiments/010-aggregate-replay.md) records the successful final sequence and resource checks.
+The [initial aggregate](experiments/010-aggregate-replay.md) records the eleven-target baseline.
+The [foundation replay](experiments/019-foundation-replay.md) records the expanded twenty-target sequence and resource checks.
 
 ## Prototype inventory
 
@@ -29,6 +30,15 @@ The [aggregate replay](experiments/010-aggregate-replay.md) records the successf
 | make prototype-recovery | Proposed attempt, cancellation, uncertain dispatch, and cleanup state | [Recovery](experiments/005-dispatch-recovery.md) |
 | make prototype-broker | Actual local HTTP proxy with synthetic identity, grants, redirects, revocation, and budgets | [Broker](experiments/006-broker-grants.md) |
 | make prototype-investigation | Baseline, reproduction, candidate, regression, missing evidence, and publication decisions | [Investigation](experiments/007-investigation-contract.md) |
+| make prototype-firewall | Outside-guest domain/IP enforcement, DNS handling, revocation, and failure cleanup | [Firewall](experiments/011-firewall-enforcement.md) |
+| make prototype-identity | Actual Kata mTLS transport, scoped identity, broker revocation, and guest replacement | [Identity](experiments/012-identity-transport.md) |
+| make prototype-durable | Kubernetes-backed attempt recovery, cancellation, absolute deadlines, and verified disposal | [Durability](experiments/013-durable-lifecycle.md) |
+| make prototype-guardian | API-independent allocation expiry and observation of kubelet replacement | [Durability](experiments/013-durable-lifecycle.md) |
+| make prototype-private-evidence | Owner access, streamed logs, supervisor signatures, and fixed retention | [Private evidence](experiments/014-private-evidence.md) |
+| make prototype-consumers | Token-free finite and session clients sharing one foundation interface | [External consumers](experiments/015-external-consumers.md) |
+| make prototype-broker-network | Actual guest identity, operation grant, broker egress profile, and bounded network failures | [Broker network](experiments/016-broker-network.md) |
+| make prototype-consumer-recovery | Exact TaskRun and Sandbox adoption; acknowledged command uncertainty without replay | [Consumer recovery](experiments/017-consumer-recovery.md) |
+| make prototype-storage | Actual guest write limits, privilege drop, namespace bypass, and filtered enforcement | [Storage limits](experiments/018-guest-storage-limits.md) |
 
 Run `make prototype-local` for the state, broker, and investigation scenarios.
 Run `make prototype-validate` for static checks and documentation links.
@@ -121,7 +131,9 @@ Neither behavior establishes suspended VM memory snapshots.
 
 Direct Pod port-forward worked for ordinary containers and failed for the Kata guest ports.
 A dedicated TCP proxy preserved authenticated REST and streaming gRPC in the prototype.
-Production transport needs authenticated encryption and destination identity across guest replacement.
+The identity prototype added mTLS with external authorization, guest server verification, and current Pod UID binding.
+It rejected old identities after actual guest replacement and interrupted revoked streams within three seconds.
+Production still needs authorized enrollment, rotation, and durable identity state.
 
 The tested KindNet enforced a direct Pod egress restriction for ordinary and Kata clients.
 Other destination classes and bypass mechanisms need profile-specific conformance checks.
@@ -145,7 +157,9 @@ A supervisor signature still depends on the supervisor's actual enforcement and 
 Keep the credential broker separate from guests and ordinary task permissions.
 The local broker prototype enforces operation scope and concurrent request budgets.
 Revocation stops an active upstream request.
-Production still needs real execution identity, authenticated encryption, provider accounting, and composed network controls.
+The later identity experiment supplies real scoped certificates, encrypted transport, and active grant revocation.
+Provider accounting and a production broker remain implementation work.
+The consumer composition applies the shared outside-guest fence to command transport and workload traffic.
 
 ## Local provider boundary
 
@@ -169,10 +183,45 @@ The lifecycle and source-entry reports preserve the exact code locations and rep
 The [upstream bug list](upstream-bugs.md) collects reproduction commands and suggested regression cases for separate contributions.
 Other findings describe integration semantics or missing extension capabilities rather than established upstream bugs.
 
+## Foundation decisions
+
+Use one foundation interface above native finite TaskRuns and Agent Sandbox sessions.
+External consumers receive scoped client identities rather than Kubernetes credentials or backend templates.
+The foundation owns source import, profiles, allocation, firewall installation, transport, evidence, and disposal.
+
+Use an outside packet fence with a trusted gateway for the first network profile.
+Inspected HTTP/S permits domain guarantees; opaque TCP grants authorize explicit IPs and ports.
+Controlled DNS and protected-address checks apply after resolution.
+Reject unsupported protocols and retain enforcement until allocation disposal is verified.
+The broker composition applies operation-grant permissions and the resolved destination profile before credential injection.
+Its outside fence blocks direct origin access, and gateway loss fails closed.
+
+The tested Kata setup accepted sixteen MiB writes despite eight MiB memory and disk emptyDir settings.
+An explicit guest tmpfs enforced eight MiB; capability removal alone still permitted a user namespace mount bypass.
+The filtered launcher blocked that tested bypass.
+Storage guarantees need actual runtime and volume enforcement, including every writable path.
+
+Persist immutable request fields and attempt identity in a small Execution resource.
+Adopt known owned children after controller restart.
+Record UnknownOutcome instead of silently repeating uncertain commands.
+Retain the cleanup finalizer when allocation binding or disposal is uncertain.
+Use an independent watchdog and a runtime supervisor with allocation admission fencing.
+The guardian stopped an actual Agent Sandbox VM, after which kubelet created another VM under the same Pod UID.
+Its synthetic entrypoint ran again. This does not demonstrate sandboxd API-command replay.
+Bind certificates, grants, and admission to the provider allocation ID or generation as well as Pod UID.
+The consumer recovery experiment separately adopted exact TaskRun and Sandbox allocations without startup or command replay.
+Acknowledged but uncommitted checks became UnknownOutcome and underwent verified disposal.
+
+Keep private logs and artifacts outside execution namespaces.
+Bind signed receipts to actual supervisor observations and stored content digests.
+Treat guest output as workload claims and signer authority as an explicit trust dependency.
+The in-memory evidence fixture demonstrates access and retention semantics, not durable production storage.
+
 ## Remaining production work
 
 Prototype evidence does not establish complete tenant isolation or production readiness.
-Production work includes enforced profile admission, durable controllers, issuer authority, private storage, broker identity, and runtime conformance.
+Production work includes supported admission, durable controllers, a node supervisor, issuer lifecycle, private object storage, broker adapters, and runtime conformance.
+The prototype code demonstrates selected behavior; it does not supply production services.
 Full process restoration, warm snapshot safety, and authoritative reuse of before-push results need separate implementation.
 
 The first production deliverable remains one immutable-source check with explicit identity, bounded execution, structured results, and verified cleanup.

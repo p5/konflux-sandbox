@@ -62,8 +62,8 @@ spec:
 EOF
 sleep 3
 if probe; then
-  echo 'OBSERVED: deny-all egress NetworkPolicy exists, but direct Pod traffic remains allowed'
-  echo 'REQUIRED: execution admission must reject profiles until network enforcement passes conformance'
+  echo 'FAIL: deny-all egress NetworkPolicy did not block direct Pod traffic'
+  exit 1
 else
   echo 'OBSERVED: deny-all egress NetworkPolicy blocks tested direct Pod connection'
 fi

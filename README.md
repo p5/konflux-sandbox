@@ -38,7 +38,8 @@ Keep repository CI workflows outside the implementation scope.
 
 Start with one Kubernetes backend and an existing VM runtime.
 Evaluate Agent Sandbox for lifecycle management during the compatibility milestone.
-Add credential access through a separate broker after the first check works without upstream credentials.
+Add credential access through a separate broker with scoped execution identities and revocable grants.
+The prototypes now exercise real identity, encrypted transport, durable recovery, private evidence, and external consumer interfaces.
 
 External workspace and vulnerability services use the same foundation contract.
 Full VM restoration and warm snapshots follow later milestones.
@@ -70,13 +71,18 @@ make prototype-vm
 make prototype-composed
 make prototype-source-entry
 make prototype-results
+make prototype-foundation
 ```
 
 The live prototypes require the sibling upstream checkouts documented in their experiment reports.
 The [recorded platform inputs](docs/setup/README.md) preserve the initial cluster and operator configuration.
 They use dedicated kubeconfigs and synthetic workloads.
+The source-entry target expects the locally fixed Build Service revision in the revision inventory.
+For its original inspected revision, set BUILD_SERVICE_TRANSPORT_EXPECTATION=nil.
 The default Konflux kubeconfig is /tmp/konflux-sandbox-prototype-qw2Tu2/kubeconfig.
 Override PROTOTYPE_KUBECONFIG explicitly when that private file moves.
+The foundation suites use /tmp/konflux-sandbox-runtime/vm-kubeconfig and the dedicated VM context.
+Their fixture manifests and guards currently require the recorded local cluster layout.
 Use `make prototype-all` for the complete sequence after cluster prerequisites are available.
 
 Results and private scratch state stay in ignored directories.

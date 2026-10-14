@@ -5,14 +5,17 @@ Branch: prototype/integration-spikes.
 
 ## Commands and outcome
 
-The final sequential replay completed with exit code 0:
+The initial eleven-target replay completed with exit code 0 before the later foundation experiments.
+Commit 8a5f855 records that baseline.
+The Makefile now includes additional foundation targets.
+The original commands were:
 
 ```sh
 make prototype-all > .prototype-results/all.log 2>&1
 make prototype-validate > .prototype-results/validate.log 2>&1
 ```
 
-The aggregate runs eleven scenario targets against local fixtures and the two dedicated Kind clusters.
+That aggregate ran eleven scenario targets against local fixtures and the two dedicated Kind clusters.
 The validation target runs Go vet, shell syntax checks, whitespace checks, and documentation link checks.
 The Go compiler was go1.27.2 linux/amd64; the prototype modules declare Go 1.26.0.
 No repository CI workflow was added.

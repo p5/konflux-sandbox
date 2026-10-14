@@ -17,7 +17,10 @@ The [implementation plan](implementation-plan.md) starts with a minimal immutabl
 | Workflow engine | Existing Tekton PipelineRuns for finite stages |
 | Execution backend | One Kubernetes adapter; Agent Sandbox is the initial candidate |
 | Isolation | Existing VM runtime with profile conformance evidence |
-| Outbound firewall | Default denial with domain, IP, CIDR, port, and protocol allowlists outside guests |
+| Outbound firewall | Trusted gateway plus outside packet fence; inspected HTTP/S domains and explicit IPv4 TCP grants |
+| Durable state | Small Execution resource above native TaskRun and Agent Sandbox adapters |
+| Execution identity | Scoped mTLS with external authorization and current guest UID binding |
+| Runtime supervisor | Trusted allocation binding, local deadline enforcement, and disposal verification |
 | Credential authority | Separate broker deployment and permissions |
 | Artifact transport | OCI references and canonical source manifests |
 | Result authority | Execution evidence; consumers decide verdict authority |
@@ -91,6 +94,30 @@ The foundation keeps backend resource management, firewall enforcement, and cred
 The broker owns upstream credentials and permitted external operations.
 Its permissions remain separate from execution guests and the installation controller.
 
+A trusted node supervisor owns allocation bindings, local deadlines, outside packet rules, and disposal observations.
+It needs runtime privileges that consumer clients never receive.
+Keep that authority separate from the credential broker and evidence readers.
+
+## New and existing components
+
+| Component | Implementation direction |
+| --- | --- |
+| Execution API, profiles, authorization, and lifecycle controller | New optional foundation component in this repository |
+| Finite workflow execution | Reuse Tekton; add approved tasks and adapters |
+| Session allocation and persistent files | Reuse Agent Sandbox; extend allocation binding and lifecycle interfaces where necessary |
+| VM isolation | Reuse Kata or another approved provider; implement no hypervisor here |
+| Node supervision and packet fence | New privileged component, or a supported runtime/CNI integration with equivalent guarantees |
+| Domain gateway | New trusted service with explicit protocol capabilities |
+| Credential broker | New service with separate credentials and operation authority |
+| Private logs, artifacts, and signed receipts | New adapter over private storage; reuse existing signing interfaces where their authority fits |
+| Workflow archive and diagnostics | Reuse Tekton Results; configure log storage separately |
+| Build, Snapshot, integration, and managed release | Reuse Konflux through supported APIs and explicit promotion |
+| Workspace, checks, and vulnerability products | External repositories consume the foundation API |
+
+These additions can live in this separate repository and install beside existing Konflux workflows.
+Existing Component, Snapshot, and Release schemas need no required field changes.
+Runtime integration can require node privileges or provider changes without breaking existing Konflux resource APIs.
+
 ## Execution interface
 
 The control interface supports request submission, status observation, cancellation, and output discovery.
@@ -112,6 +139,10 @@ The controller records resolved configuration before dispatch.
 An admitted request cannot change its inputs or authority.
 Changes require a new request or an explicit new attempt.
 
+The [consumer prototype](experiments/015-external-consumers.md) exposes capability discovery, immutable submission, observation, session commands, completion, and private evidence retrieval.
+Two token-free clients use this interface without Kubernetes libraries, credentials, or backend templates.
+The production API must add durable asynchronous operation state and versioned compatibility rules.
+
 The status separates command outcome, infrastructure outcome, and cleanup conditions.
 Logs and evidence live in bounded artifact storage.
 Status fields contain references and short operational conditions.
@@ -121,7 +152,14 @@ Status fields contain references and short operational conditions.
 Repeated reconciliation adopts the same owned child resources.
 Cancellation is idempotent and propagates to all children.
 Deletion requires cleanup or an explicit retained-resource condition.
-An orphan reconciler removes expired resources after controller failure.
+An independent watchdog removes expired resources after lifecycle controller failure while the Kubernetes API remains available.
+A runtime supervisor enforces local deadlines and allocation lease expiry without that API.
+The runtime admission path must reject replacements whose execution authority expired.
+A stopped CRI allocation alone cannot prove that kubelet will not create another allocation.
+Persist allocation identity before untrusted code starts and keep cleanup finalizers until disposal is verified.
+Bind runtime admission and execution identity to the provider allocation ID or generation as well as Pod UID.
+Kubelet can replace a runtime allocation without changing that Pod UID.
+The supervisor must account for every allocation generation associated with an attempt before it declares disposal complete.
 
 Command dispatch has a failure window between execution and durable result recording.
 The inspected Agent Sandbox command interface does not provide a client request token for deduplication.
@@ -157,6 +195,16 @@ The guest receives no long-lived upstream credentials or general Kubernetes API 
 If the transport requires a guest identity, scope it to that execution and its permitted operations.
 Keep signing keys, repository write credentials, model credentials, and registry credentials outside guests.
 
+The [identity prototype](experiments/012-identity-transport.md) binds mTLS certificates to owner, request, attempt, role, and actual guest UID.
+The trusted gateway authorizes callers outside the guest and verifies the destination certificate before forwarding.
+The broker checks both a scoped grant and the current guest binding.
+Guest replacement invalidates the old binding even when its certificate remains cryptographically valid.
+The prototype tests replacement with a new Pod UID.
+Production identity must also distinguish runtime replacement within one Pod UID.
+An opaque relay carries TLS bytes without credential or certificate authority.
+The trusted gateway terminates TLS and can read commands and file data.
+Production certificate enrollment must derive claims from authorized durable state rather than caller-selected certificate fields.
+
 The broker authorizes operations against an execution identity and a revocable grant.
 A grant names its owner, destination, action, deadline, and budget.
 The broker validates destinations and redirects before credential injection.
@@ -182,20 +230,50 @@ IPv6 needs equivalent enforcement or explicit disablement before admission.
 Protected destination rules cover metadata, hosts, control-plane endpoints, unrelated tenants, and unrelated cluster services.
 
 Policy readiness gates workload admission.
+Install outside enforcement before any guest process handles untrusted source or application data.
+Trusted bootstrap can establish identity and the narrow control transport before that barrier.
 Enforcement failure stops affected network access.
 Policy revocation must stop new connections and terminate established connections within a documented bound.
 The audit record binds decisions to execution identity and policy revision.
 Broker requests also need destination checks because a broker can otherwise bypass guest egress restrictions.
 
-The firewall implementation remains an open design decision.
+The [firewall prototype](experiments/011-firewall-enforcement.md) selected a trusted gateway plus an outside-guest packet fence.
+Production needs a durable node agent or supported CNI adapter for interface binding, admission, disposal, and rule ownership.
+The initial profile permits inspected HTTP/S domain traffic and explicit IPv4 TCP IP or CIDR grants.
+HTTPS inspection requires client trust in the gateway CA and permits the gateway to read application data.
+Opaque IP tunnels carry IP and port authority without an HTTP hostname guarantee.
+UDP, IPv6 access, opaque domain tunnels, and unknown policy fields fail admission.
+The fence rejects IPv6 traffic in both directions.
+The local IPv6 baseline was unavailable; supported IPv6 access needs separate conformance evidence.
+The gateway controls DNS, checks protected addresses after resolution, and opens fresh upstream connections.
+Revocation closed tested active HTTP, HTTPS, and TCP streams within three seconds.
+That local assertion does not establish a production latency guarantee.
 Standard NetworkPolicy provides IP, Pod, namespace, and port controls; its API does not express domain allowlists.
 Domain restrictions therefore need an additional enforcement implementation.
 Standard NetworkPolicy also leaves the effect of policy changes on established connections to its enforcement implementation.
 Source: [Kubernetes NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/).
 
-Existing experiments demonstrated one direct Pod IP restriction with KindNet.
-They did not demonstrate domain filtering, rebinding protection, IPv6 restrictions, or complete bypass prevention.
-The first foundation release requires separate firewall conformance evidence.
+The suite exercised ordinary containers, real Kata sessions, and native Kata TaskRuns.
+It tested shared addresses, DNS changes, rebinding, unauthorized resolvers, redirects, hostname mismatch, and direct connection attempts.
+The outside fence remained active after gateway deletion and until verified guest disposal.
+Production conformance must cover each supported CNI, routing mode, runtime, and protocol.
+The [broker composition](experiments/016-broker-network.md) applies the destination profile to broker-originated operations through a separately fenced gateway.
+Grant permission and profile permission must both allow the destination before the broker injects credentials.
+
+## Storage limits
+
+The [storage experiment](experiments/018-guest-storage-limits.md) found that both memory and disk emptyDir settings allowed writes beyond sizeLimit inside Kata.
+An explicit guest tmpfs imposed the requested volume limit.
+Capability removal alone still allowed an unprivileged namespace to mount another filesystem.
+The filtered launcher blocked that tested bypass after trusted bootstrap and privilege drop.
+
+Profiles must specify actual runtime and volume guarantees rather than infer hard quotas from Kubernetes resource fields.
+Require a read-only root and bounded writable paths.
+Include shared memory, artifact staging, task workspaces, persistent volumes, and restore paths in conformance.
+Guest filesystem enforcement depends on the guest kernel.
+Guest root or kernel compromise requires storage ceilings outside that guest, such as provider disk capacity or host filesystem quotas.
+Persistent volume quota enforcement remains implementation work.
+The experimental Linux AMD64 syscall filter is not a complete production policy.
 
 ## Source artifacts and evidence
 
@@ -225,6 +303,12 @@ Do not claim that a requested profile alone proves enforcement.
 
 Private findings, patches, reproducers, source, and model traces require private storage and access controls.
 Public publication occurs through a separate authorized operation.
+
+The [private evidence prototype](experiments/014-private-evidence.md) demonstrates owner-scoped HTTPS access, bounded output, immutable artifacts, and fixed retention.
+A trusted supervisor signs receipts; the store and clients verify them with separately supplied public keys.
+The consumer composition keeps evidence available after guest and execution namespace removal.
+These fixtures hold evidence in memory and retain ignored local captures after API retention expires.
+Production storage must define durable retention, backups, access revocation, and deletion of managed copies.
 
 ## Konflux compatibility
 

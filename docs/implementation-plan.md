@@ -10,14 +10,19 @@ External services own product controllers, user interfaces, agent reasoning, fin
 ## Prototype baseline
 
 The [prototype findings](prototype-findings.md) record actual Konflux, Tekton, Agent Sandbox, Kata, artifact, policy, and Results behavior.
-The [aggregate replay](experiments/010-aggregate-replay.md) completed successfully on the two dedicated Kind clusters.
+The [initial aggregate](experiments/010-aggregate-replay.md) completed successfully on the two dedicated Kind clusters.
+The [foundation replay](experiments/019-foundation-replay.md) records the later twenty-target sequence.
 Those experiments support native VM TaskRuns for finite execution and Agent Sandbox for session lifecycle.
 The runtime choices remain subject to a supported compatibility contract.
 
-The network experiment demonstrated one direct Pod IP restriction.
-It did not establish domain allowlists, DNS rebinding protection, IPv6 coverage, or complete bypass prevention.
-Domain and IP firewall enforcement is a required first-release capability.
-Select its implementation and demonstrate its guarantees before claiming a supported foundation profile.
+The [firewall experiment](experiments/011-firewall-enforcement.md) demonstrates a gateway and outside-guest packet fence.
+Its bounded profile supports inspected HTTP/S domains and explicit IPv4 TCP IP or CIDR grants.
+Unsupported UDP, IPv6 access, and opaque domain tunnels fail admission.
+The [identity experiment](experiments/012-identity-transport.md) demonstrates scoped mTLS, active revocation, and stale guest rejection.
+The [durable lifecycle experiment](experiments/013-durable-lifecycle.md) demonstrates crash recovery and independent cancellation while Kubernetes remains available.
+The [private evidence experiment](experiments/014-private-evidence.md) demonstrates owner access, supervisor signatures, and fixed retention.
+The [consumer composition](experiments/015-external-consumers.md) tests one foundation API with finite and session clients.
+These prototypes settle implementation choices; they do not complete production milestones.
 
 The investigation prototype remains a consumer example that informed execution and evidence requirements.
 Its existence does not add a vulnerability product to this repository's scope.
@@ -71,7 +76,7 @@ Record the VM runtime, CNI, firewall implementation, storage driver, and served 
 Pin compatible Agent Sandbox, Tekton, Kubernetes clients, and controller-runtime versions.
 Use supported interfaces instead of imports from Konflux controller internals.
 
-Select the firewall's deployment model before implementing its adapter.
+Implement the selected gateway and outside-fence pattern through a durable node agent or supported CNI adapter.
 Evaluate how domain rules authorize names, resolve addresses, handle shared IPs, and restrict supported protocols.
 Record how enforcement covers native TaskRuns, sessions, broker operations, IPv4, and IPv6.
 Define protected destination precedence, policy readiness, DNS expiry, revocation bounds, and failure behavior.
@@ -83,14 +88,16 @@ Do not infer enforcement from configuration objects alone.
 
 Select an authenticated transport for command, file, terminal, and log traffic.
 The runtime experiment records Kata's direct port-forward limitation and the local TCP proxy workaround.
-Production transport needs authenticated encryption and destination identity across guest replacement.
+Use the demonstrated mTLS transport with external authorization and current guest UID binding.
+Implement authorized certificate enrollment, renewal, rotation, and issuer recovery before production use.
 
 Select the extension API group and project license before the first implementation release.
 
 ## M1 Define foundation contracts
 
 Define the minimum durable execution request and administrator-controlled execution profile.
-Use the recovery prototype to choose an owned PipelineRun or a provisional execution resource.
+Start with a small provisional Execution resource above native TaskRun and Agent Sandbox adapters.
+The durable prototype demonstrates the common attempt and disposal state that this resource must retain.
 Keep product resources such as WorkspaceSession, SecurityCampaign, and SecurityInvestigation in consumer repositories.
 
 A request identifies immutable source, approved command definition, environment, profile, owner, request identifier, limits, and deadline.
@@ -101,7 +108,12 @@ Each explicit retry receives a new attempt identity.
 Separate execution outcome, infrastructure outcome, and cleanup status.
 Record unknown outcomes when dispatch acknowledgement or result delivery is uncertain.
 Repeated reconciliation must adopt the same owned child resources.
-An orphan reconciler must remove expired resources after controller failure.
+An independent watchdog must enforce cancellation and absolute deadlines after lifecycle controller failure.
+A runtime supervisor must enforce local deadlines and allocation leases during Kubernetes API failure.
+Bind admission to the current allocation so kubelet replacement cannot restart expired work.
+Persist Pod UID and provider allocation identity before untrusted code starts.
+Bind certificates, grants, and runtime admission to the allocation ID or generation, including replacements within one Pod UID.
+Retain a cleanup finalizer when allocation identity or disposal remains uncertain.
 
 Define canonical source selection, filesystem metadata, confined import, output export, and bounded artifact formats.
 Keep Git revisions as context until the foundation verifies their exact relationship to source bytes.
@@ -118,7 +130,8 @@ Keep trusted control, artifact transport credentials, signing authority, and enf
 
 Implement allocation, source import, command execution, bounded output, export, cancellation, and destruction.
 Bind runtime resources and firewall state to the execution attempt.
-Require enforcement readiness before untrusted commands start.
+Require enforcement readiness before untrusted commands or source processing start.
+Establish only trusted bootstrap and the narrow control transport before that admission barrier.
 
 Implement the domain and IP firewall requirements from the requirements document.
 Test allowed and forbidden domains, IPs, CIDRs, ports, and protocols.
@@ -126,6 +139,10 @@ Include controlled DNS, address expiry, rebinding, shared addresses, direct IP a
 Cover IPv6 or disable it explicitly before admission.
 Verify revocation against existing connections as well as new connections.
 Verify enforcement failure and controller restart behavior.
+The storage experiment shows that emptyDir sizeLimit alone does not supply an immediate guest write limit in this Kata setup.
+Use provider-enforced volumes or trusted guest bootstrap with actual filesystem limits.
+Remove mount authority and block namespace operations that bypass the selected volume budget.
+Verify all writable paths, including shared memory, artifact staging, workspaces, and persistent volumes.
 
 The first profile can restrict network access to fixture destinations and required control or artifact transport paths.
 It must still demonstrate domain and IP rule semantics.
@@ -210,6 +227,7 @@ cmd/broker/                  Credential broker
 cmd/ksbx/                    Minimal execution client
 internal/execution/          Attempt state and resource lifecycle
 internal/backend/            Runtime and session adapters
+cmd/node-agent/              Allocation fencing, local deadlines, and outside packet enforcement
 internal/firewall/           Resolved network policy and enforcement adapter
 internal/artifacts/          Canonical source and confined transport
 internal/evidence/           Receipts and trusted observations

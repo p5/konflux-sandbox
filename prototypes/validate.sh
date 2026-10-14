@@ -4,6 +4,9 @@ cd "$(dirname "$0")/.."
 go -C prototypes vet ./...
 go -C prototypes/artifacts vet ./...
 go -C prototypes/source-entry/build-service vet -mod=mod ./...
+for module in identity durable private-evidence consumers broker-network; do
+  go -C "prototypes/$module" vet ./...
+done
 while IFS= read -r script; do
   bash -n "$script"
 done < <(rg --files prototypes -g '*.sh')
@@ -20,7 +23,7 @@ for (const file of files) {
   for (const match of fs.readFileSync(file, 'utf8').matchAll(/\]\(([^)]+)\)/g)) {
     const target = match[1].split('#')[0];
     if (!target || /^(https?:|mailto:|\/)/.test(target)) continue;
-    if (target.includes('.prototype-results/') || target.includes('/runtime/evidence/')) continue;
+    if (target.includes('.prototype-results/') || /prototypes\/[^/]+\/evidence\//.test(target)) continue;
     links++;
     if (!fs.existsSync(path.resolve(path.dirname(file), target))) missing.push({file, target});
   }

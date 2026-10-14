@@ -61,6 +61,10 @@ Expose interactive capabilities through the same foundation contract as their im
 
 Native Tekton with Kata and Agent Sandbox remain implementation choices subject to compatibility evidence.
 Remote dispatch remains optional.
-The firewall implementation remains open; its domain, IP, protocol, DNS, and revocation guarantees require a separate design decision.
+The initial firewall pattern combines a trusted gateway with an outside-guest packet fence.
+The demonstrated profile permits inspected HTTP/S domain traffic and explicit IPv4 TCP IP or CIDR grants.
+UDP, IPv6 access, opaque domain tunnels, and unsupported policy fields fail admission.
+Production still needs a durable node agent or supported CNI adapter, concurrent ownership, and multi-node conformance.
+The [foundation experiments](experiments/011-firewall-enforcement.md) record the tested guarantees and limits.
 Full VM memory restoration, shared warm snapshots, and automatic check-result reuse remain deferred.
 External product services own any authoritative verdict reuse or publication decisions.

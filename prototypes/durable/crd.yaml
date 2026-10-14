@@ -1,0 +1,110 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: executions.foundation.sandbox.p5.dev
+spec:
+  group: foundation.sandbox.p5.dev
+  scope: Namespaced
+  names:
+    plural: executions
+    singular: execution
+    kind: Execution
+    shortNames: [fexec]
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    subresources:
+      status: {}
+    additionalPrinterColumns:
+    - name: Attempt
+      type: string
+      jsonPath: .spec.attemptID
+    - name: Phase
+      type: string
+      jsonPath: .status.phase
+    - name: Clean
+      type: boolean
+      jsonPath: .status.cleanupComplete
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            required: [ownerID, attemptID, sourceDigest, profileDigest, image, command, deadline]
+            properties:
+              ownerID:
+                type: string
+                minLength: 1
+                maxLength: 128
+                x-kubernetes-validations:
+                - rule: self == oldSelf
+                  message: ownerID is immutable
+              attemptID:
+                type: string
+                pattern: '^[a-z0-9][a-z0-9-]{0,19}$'
+                x-kubernetes-validations:
+                - rule: self == oldSelf
+                  message: attemptID is immutable
+              sourceDigest:
+                type: string
+                pattern: '^sha256:[a-f0-9]{64}$'
+                x-kubernetes-validations:
+                - rule: self == oldSelf
+                  message: sourceDigest is immutable
+              profileDigest:
+                type: string
+                pattern: '^sha256:[a-f0-9]{64}$'
+                x-kubernetes-validations:
+                - rule: self == oldSelf
+                  message: profileDigest is immutable
+              image:
+                type: string
+                minLength: 1
+                maxLength: 256
+                x-kubernetes-validations:
+                - rule: self == oldSelf
+                  message: image is immutable
+              command:
+                type: array
+                minItems: 1
+                maxItems: 20
+                items:
+                  type: string
+                  maxLength: 8192
+                x-kubernetes-validations:
+                - rule: self == oldSelf
+                  message: command is immutable
+              deadline:
+                type: string
+                format: date-time
+                x-kubernetes-validations:
+                - rule: self == oldSelf
+                  message: deadline is immutable
+              env:
+                type: object
+                default: {}
+                maxProperties: 32
+                additionalProperties:
+                  type: string
+                  maxLength: 4096
+                x-kubernetes-validations:
+                - rule: self == oldSelf
+                  message: env is immutable
+              mode:
+                type: string
+                enum: [finite, session]
+                default: finite
+                x-kubernetes-validations:
+                - rule: self == oldSelf
+                  message: mode is immutable
+              cancel:
+                type: boolean
+                default: false
+                x-kubernetes-validations:
+                - rule: '!oldSelf || self'
+                  message: cancellation cannot be withdrawn
+          status:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true

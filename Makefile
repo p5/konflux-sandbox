@@ -1,5 +1,6 @@
 .NOTPARALLEL:
-.PHONY: prototype-local prototype-validate prototype-recovery prototype-recovery-interactive prototype-broker prototype-investigation prototype-dispatch prototype-artifacts prototype-konflux prototype-runtime prototype-vm prototype-composed prototype-source-entry prototype-results prototype-all
+.PHONY: prototype-local prototype-validate prototype-recovery prototype-recovery-interactive prototype-broker prototype-investigation prototype-dispatch prototype-artifacts prototype-konflux prototype-runtime prototype-vm prototype-composed prototype-source-entry prototype-results prototype-firewall prototype-identity prototype-durable prototype-guardian prototype-private-evidence prototype-consumers prototype-foundation prototype-all
+.PHONY: prototype-broker-network prototype-consumer-recovery prototype-storage
 
 PROTOTYPE_KUBECONFIG ?= /tmp/konflux-sandbox-prototype-qw2Tu2/kubeconfig
 PROTOTYPE_CONTEXT ?= kind-konflux-sandbox-prototype
@@ -45,4 +46,33 @@ prototype-source-entry:
 prototype-results:
 	$(MAKE) -C prototypes/results run KUBECONFIG="$(PROTOTYPE_KUBECONFIG)" KUBE_CONTEXT="$(PROTOTYPE_CONTEXT)"
 
-prototype-all: prototype-local prototype-artifacts prototype-konflux prototype-dispatch prototype-runtime prototype-vm prototype-composed prototype-source-entry prototype-results
+prototype-firewall:
+	$(MAKE) -C prototypes/firewall run
+
+prototype-identity:
+	$(MAKE) -C prototypes/identity run
+
+prototype-durable:
+	$(MAKE) -C prototypes/durable run
+
+prototype-guardian:
+	$(MAKE) -C prototypes/durable runtime-guardian
+
+prototype-private-evidence:
+	$(MAKE) -C prototypes/private-evidence run
+
+prototype-consumers:
+	$(MAKE) -C prototypes/consumers run
+
+prototype-broker-network:
+	$(MAKE) -C prototypes/broker-network run
+
+prototype-consumer-recovery:
+	$(MAKE) -C prototypes/consumers recovery
+
+prototype-storage:
+	$(MAKE) -C prototypes/storage run
+
+prototype-foundation: prototype-artifacts prototype-vm prototype-firewall prototype-identity prototype-durable prototype-guardian prototype-private-evidence prototype-consumers prototype-broker-network prototype-consumer-recovery prototype-storage
+
+prototype-all: prototype-local prototype-artifacts prototype-konflux prototype-dispatch prototype-runtime prototype-vm prototype-composed prototype-source-entry prototype-results prototype-foundation prototype-validate

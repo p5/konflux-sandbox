@@ -7,7 +7,8 @@ Prototype completion does not establish production readiness.
 The [foundation requirements](requirements.md) supersede earlier product implementation scope in this research plan.
 Workspace and investigation prototypes inform interfaces for external consumers.
 Their product logic remains outside this repository's implementation scope.
-Domain and IP firewall conformance remains an open prototype requirement beyond the existing direct Pod IP experiment.
+The [firewall experiment](experiments/011-firewall-enforcement.md) now demonstrates the first bounded domain and IP profile.
+Additional experiments cover real identity, durable recovery, private evidence, and two external consumers.
 
 The [implementation plan](implementation-plan.md) defines the production milestones.
 
@@ -21,7 +22,14 @@ The [implementation plan](implementation-plan.md) defines the production milesto
 | P4 Credential broker | Can an execution use one permitted operation without obtaining the upstream credential? | Broker grant format, execution authentication, and network enforcement | Before M4 |
 | P5 Checkpoint semantics | What state survives suspension on the selected runtime? | Runtime capabilities and workspace lifecycle | During M0 evaluation; implementation can follow M5 |
 | P6 Investigation consumer | Can an external workflow distinguish a reproduced finding, a validated patch, and an inconclusive result? | Foundation evidence and consumer integration requirements | Research fixture only; product implementation remains external |
-| P7 Outbound firewall | Can guests reach only approved domains and IPs across supported protocols and policy changes? | Domain semantics, DNS handling, bypass prevention, enforcement readiness, and revocation | Required before M2 acceptance |
+| P7 Outbound firewall | Can guests reach only approved domains and IPs across supported protocols and policy changes? | Gateway plus outside fence; explicit protocol capabilities | Prototype complete; production M2 remains |
+| P8 Identity and transport | Can scoped identities reject other owners, stale guests, and revoked operations over encrypted transport? | Trusted issuer, external authorization, current guest binding | [Experiment 012](experiments/012-identity-transport.md) |
+| P9 Durable lifecycle | Can controller recovery avoid replay and verify disposal without its caller? | Durable attempt, allocation binding, finalizer, independent deadline enforcement | [Experiment 013](experiments/013-durable-lifecycle.md) |
+| P10 Private evidence | Can evidence outlive its producer while access and retention remain scoped? | Private storage adapter and independent receipt authority | [Experiment 014](experiments/014-private-evidence.md) |
+| P11 External consumers | Can finite and session clients share one contract without Kubernetes authority? | Foundation owns backend and enforcement operations | [Experiment 015](experiments/015-external-consumers.md) |
+| P12 Broker network composition | Do credential grants and firewall profiles jointly restrict upstream operations? | Separate broker authority with enforced egress | [Experiment 016](experiments/016-broker-network.md) |
+| P13 Common backend recovery | Can actual TaskRuns and Sandbox sessions recover without command replay? | Shared durable request and exact allocation binding | [Experiment 017](experiments/017-consumer-recovery.md) |
+| P14 Storage limits | Do requested storage settings impose hard guest write limits? | Explicit filesystem limits and namespace restrictions | [Experiment 018](experiments/018-guest-storage-limits.md) |
 
 Start P1, P2, and P3 before broad implementation.
 Use P5 early to identify runtime limits that affect later workspace requirements.
@@ -209,6 +217,16 @@ make prototype-dispatch
 make prototype-investigation
 make prototype-source-entry
 make prototype-results
+make prototype-firewall
+make prototype-identity
+make prototype-durable
+make prototype-guardian
+make prototype-private-evidence
+make prototype-consumers
+make prototype-broker-network
+make prototype-consumer-recovery
+make prototype-storage
+make prototype-foundation
 ```
 
 Keep prototype code on explicit prototype branches or isolated worktrees.
