@@ -162,6 +162,7 @@ Two observed issues have small independent contribution scopes:
 2. Return the HTTP transport error from TriggerPaCBuild when incoming delivery fails.
 
 The lifecycle and source-entry reports preserve the exact code locations and reproductions.
+The [upstream bug list](upstream-bugs.md) collects reproduction commands and suggested regression cases for separate contributions.
 Other findings describe integration semantics or missing extension capabilities rather than established upstream bugs.
 
 ## Remaining production work
