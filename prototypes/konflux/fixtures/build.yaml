@@ -1,0 +1,46 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: @BUILD@
+  namespace: konflux-lifecycle-prototype
+  labels:
+    pipelines.appstudio.openshift.io/type: build
+    appstudio.openshift.io/application: @APPLICATION@
+    appstudio.openshift.io/component: @COMPONENT@
+    sandbox.konflux-ci.dev/fixture: synthetic-build
+spec:
+  timeouts:
+    pipeline: 5m
+  taskRunTemplate:
+    serviceAccountName: lifecycle-runner
+    podTemplate:
+      automountServiceAccountToken: false
+  pipelineSpec:
+    results:
+    - name: IMAGE_URL
+      value: $(tasks.fixture-build.results.IMAGE_URL)
+    - name: IMAGE_DIGEST
+      value: $(tasks.fixture-build.results.IMAGE_DIGEST)
+    - name: CHAINS-GIT_URL
+      value: $(tasks.fixture-build.results.CHAINS-GIT_URL)
+    - name: CHAINS-GIT_COMMIT
+      value: $(tasks.fixture-build.results.CHAINS-GIT_COMMIT)
+    tasks:
+    - name: fixture-build
+      taskSpec:
+        results:
+        - name: IMAGE_URL
+        - name: IMAGE_DIGEST
+        - name: CHAINS-GIT_URL
+        - name: CHAINS-GIT_COMMIT
+        steps:
+        - name: fixture
+          image: docker.io/library/alpine:3.22.2@sha256:85f2b723e106c34644cd5851d7e81ee87da98ac54672b29947c052a45d31dc2f
+          script: |
+            #!/bin/sh
+            set -eu
+            printf '%s' '@IMAGE_URL@' > '$(results.IMAGE_URL.path)'
+            printf '%s' '@IMAGE_DIGEST@' > '$(results.IMAGE_DIGEST.path)'
+            printf '%s' 'https://github.com/p5/konflux-sandbox' > '$(results.CHAINS-GIT_URL.path)'
+            printf '%s' '@SOURCE_REVISION@' > '$(results.CHAINS-GIT_COMMIT.path)'
+            printf 'Synthetic build metadata; artifact already exists in local registry.\n'

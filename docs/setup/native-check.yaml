@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sandbox-prototype
+  labels:
+    app.kubernetes.io/part-of: konflux-sandbox-prototype
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sandbox-prototype-runner
+  namespace: sandbox-prototype
+automountServiceAccountToken: false
+---
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: native-check
+  namespace: sandbox-prototype
+  labels:
+    sandbox.konflux-ci.dev/prototype: native-execution
+spec:
+  timeouts:
+    pipeline: 5m
+  taskRunTemplate:
+    serviceAccountName: sandbox-prototype-runner
+    podTemplate:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+  pipelineSpec:
+    results:
+    - name: check-result
+      value: $(tasks.check.results.check-result)
+    tasks:
+    - name: check
+      taskSpec:
+        results:
+        - name: check-result
+          type: string
+        steps:
+        - name: execute
+          image: docker.io/library/alpine:3.22.2@sha256:85f2b723e106c34644cd5851d7e81ee87da98ac54672b29947c052a45d31dc2f
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          script: |
+            #!/bin/sh
+            set -eu
+            printf '%s' '{"schemaVersion":1,"outcome":"passed","check":"native-shape"}' > "$(results.check-result.path)"
+            printf 'Native execution completed.\n'
+    - name: consume
+      params:
+      - name: check-result
+        value: $(tasks.check.results.check-result)
+      taskSpec:
+        params:
+        - name: check-result
+          type: string
+        steps:
+        - name: consume-result
+          image: docker.io/library/alpine:3.22.2@sha256:85f2b723e106c34644cd5851d7e81ee87da98ac54672b29947c052a45d31dc2f
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          env:
+          - name: CHECK_RESULT
+            value: $(params.check-result)
+          script: |
+            #!/bin/sh
+            set -eu
+            printf '%s\n' "$CHECK_RESULT"

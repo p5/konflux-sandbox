@@ -1,0 +1,47 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: results-diagnostics-
+  namespace: results-prototype
+  labels:
+    sandbox.konflux-ci.dev/prototype: results-diagnostics
+spec:
+  timeouts:
+    pipeline: 2m
+  taskRunTemplate:
+    serviceAccountName: results-execution
+    podTemplate:
+      automountServiceAccountToken: false
+  pipelineSpec:
+    results:
+    - name: source-digest
+      value: $(tasks.prepare.results.source-digest)
+    - name: check-result
+      value: $(tasks.check.results.check-result)
+    tasks:
+    - name: prepare
+      taskSpec:
+        results:
+        - name: source-digest
+        steps:
+        - name: prepare
+          image: docker.io/library/alpine:3.22.2@sha256:85f2b723e106c34644cd5851d7e81ee87da98ac54672b29947c052a45d31dc2f
+          script: |
+            #!/bin/sh
+            set -eu
+            printf 'sha256:%s' "$(printf 'synthetic source' | sha256sum | cut -d' ' -f1)" > "$(results.source-digest.path)"
+            echo 'RESULTS_PREPARE_MARKER synthetic input'
+    - name: check
+      runAfter: [prepare]
+      taskSpec:
+        results:
+        - name: check-result
+        steps:
+        - name: check
+          image: docker.io/library/alpine:3.22.2@sha256:85f2b723e106c34644cd5851d7e81ee87da98ac54672b29947c052a45d31dc2f
+          script: |
+            #!/bin/sh
+            set -eu
+            printf '{"status":"failed","reason":"synthetic check failure"}' > "$(results.check-result.path)"
+            echo 'RESULTS_DIAGNOSTIC_MARKER synthetic check failed' >&2
+            exit 23

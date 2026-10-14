@@ -1,0 +1,72 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: lifecycle-managed-release
+  namespace: konflux-lifecycle-prototype
+spec:
+  params:
+  - name: release
+  - name: releasePlan
+  - name: releasePlanAdmission
+  - name: releaseServiceConfig
+  - name: snapshot
+  - name: enterpriseContractPolicy
+  workspaces:
+  - name: release-workspace
+  results:
+  - name: POLICY_VERIFIED
+    value: $(tasks.gate.results.POLICY_VERIFIED)
+  - name: DESTINATION_REACHED
+    value: $(tasks.gate.results.DESTINATION_REACHED)
+  tasks:
+  - name: gate
+    workspaces:
+    - name: data
+      workspace: release-workspace
+    params:
+    - name: snapshot
+      value: $(params.snapshot)
+    - name: policy
+      value: $(params.enterpriseContractPolicy)
+    taskSpec:
+      params:
+      - name: snapshot
+      - name: policy
+      workspaces:
+      - name: data
+      results:
+      - name: POLICY_VERIFIED
+      - name: DESTINATION_REACHED
+      steps:
+      - name: fetch-snapshot
+        image: konflux-sandbox-lifecycle-tools:prototype
+        env:
+        - name: SNAPSHOT_REF
+          value: $(params.snapshot)
+        script: |
+          #!/bin/sh
+          set -eu
+          kubectl get snapshots.appstudio.redhat.com "${SNAPSHOT_REF#*/}" -n "${SNAPSHOT_REF%/*}" \
+            -o jsonpath='{.spec}' > "$(workspaces.data.path)/snapshot.json"
+      - name: conforma-gate
+        image: konflux-sandbox-lifecycle-tools:prototype
+        env:
+        - name: EC_POLICY
+          value: $(params.policy)
+        script: |
+          #!/bin/sh
+          set -eu
+          ec_exit=0
+          ec validate image --images "$(workspaces.data.path)/snapshot.json" \
+            --policy "$EC_POLICY" --ignore-rekor --show-successes --timeout=60s \
+            --output "json=$(workspaces.data.path)/ec-report.json" || ec_exit=$?
+          cat "$(workspaces.data.path)/ec-report.json"
+          if [ "$ec_exit" -ne 0 ]; then exit "$ec_exit"; fi
+          printf '%s' true > "$(results.POLICY_VERIFIED.path)"
+      - name: local-noop-destination
+        image: konflux-sandbox-lifecycle-tools:prototype
+        script: |
+          #!/bin/sh
+          set -eu
+          printf 'Policy permitted the local no-op destination. No artifact was published.\n'
+          printf '%s' local-noop > "$(results.DESTINATION_REACHED.path)"

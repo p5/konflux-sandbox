@@ -1,0 +1,43 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: lifecycle-integration
+  namespace: konflux-lifecycle-prototype
+spec:
+  params:
+  - name: SNAPSHOT
+    type: string
+  - name: outcome
+    type: string
+  tasks:
+  - name: fixture-check
+    params:
+    - name: outcome
+      value: $(params.outcome)
+    taskSpec:
+      params:
+      - name: outcome
+        type: string
+      results:
+      - name: TEST_OUTPUT
+        type: string
+      steps:
+      - name: fixture-result
+        image: docker.io/library/alpine:3.22.2@sha256:85f2b723e106c34644cd5851d7e81ee87da98ac54672b29947c052a45d31dc2f
+        env:
+        - name: OUTCOME
+          value: $(params.outcome)
+        script: |
+          #!/bin/sh
+          set -eu
+          case "$OUTCOME" in
+            cancel) sleep 300 ;;
+            malformed) printf '%s' '{"result":"SUCCESS"}' > "$(results.TEST_OUTPUT.path)" ;;
+            *)
+              failures=0
+              successes=1
+              if [ "$OUTCOME" = FAILURE ]; then failures=1; successes=0; fi
+              printf '{"result":"%s","timestamp":"%s","successes":%s,"failures":%s,"warnings":0,"note":"Synthetic lifecycle fixture"}' \
+                "$OUTCOME" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$successes" "$failures" > "$(results.TEST_OUTPUT.path)"
+              ;;
+          esac

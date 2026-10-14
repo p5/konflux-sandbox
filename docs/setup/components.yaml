@@ -1,0 +1,34 @@
+apiVersion: konflux.konflux-ci.dev/v1alpha1
+kind: KonfluxCertManager
+metadata:
+  name: konflux-cert-manager
+spec:
+  createClusterIssuer: true
+  distributeClusterCABundle: true
+---
+apiVersion: konflux.konflux-ci.dev/v1alpha1
+kind: KonfluxApplicationAPI
+metadata:
+  name: konflux-application-api
+spec: {}
+---
+apiVersion: konflux.konflux-ci.dev/v1alpha1
+kind: KonfluxIntegrationService
+metadata:
+  name: konflux-integration-service
+spec:
+  integrationControllerManager:
+    replicas: 1
+    manager:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 1Gi
+  snapshotGarbageCollector:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi

@@ -1,0 +1,36 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: local-source-entry
+  annotations:
+    pipelinesascode.tekton.dev/on-event: "[push]"
+    pipelinesascode.tekton.dev/on-target-branch: "[main]"
+spec:
+  params:
+  - name: revision
+    value: "{{ revision }}"
+  - name: source-url
+    value: "{{ repo_url }}"
+  pipelineSpec:
+    params:
+    - name: revision
+      type: string
+    - name: source-url
+      type: string
+    tasks:
+    - name: source-entry
+      taskRef:
+        name: local-check
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: local-check
+spec:
+  steps:
+  - name: local-check
+    image: docker.io/library/alpine:3.22.2@sha256:85f2b723e106c34644cd5851d7e81ee87da98ac54672b29947c052a45d31dc2f
+    script: |
+      #!/bin/sh
+      set -eu
+      printf 'local source-entry fixture\n'

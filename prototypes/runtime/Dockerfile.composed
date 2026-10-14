@@ -1,0 +1,2 @@
+FROM konflux-sandbox-runtime:prototype
+COPY oras source-helper retry use-oci.sh oras_opts.sh select-oci-auth.sh /usr/local/bin/

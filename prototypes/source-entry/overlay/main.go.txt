@@ -1,0 +1,37 @@
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"strings"
+
+	"github.com/openshift-pipelines/pipelines-as-code/pkg/adapter"
+)
+
+func main() {
+	body, err := os.ReadFile(os.Args[1])
+	if err != nil {
+		panic(err)
+	}
+	for _, c := range []struct {
+		Name     string
+		Body     []byte
+		Expected string
+	}{
+		{"actual-build-service-payload-without-secret", body, "missing required fields: [secret]"},
+		{"malformed-json", []byte("{"), "invalid JSON body for incoming webhook"},
+	} {
+		r := httptest.NewRequest(http.MethodPost, "http://local.invalid/incoming", bytes.NewReader(c.Body))
+		r.Header.Set("Content-Type", "application/json")
+		err := adapter.SourceEntryPrototypeParse(r, c.Body)
+		if err == nil || !strings.Contains(err.Error(), c.Expected) {
+			panic("unexpected incoming parser result")
+		}
+		if err := json.NewEncoder(os.Stdout).Encode(map[string]any{"scenario": c.Name, "parserError": err.Error(), "parser": "actual upstream parseIncomingPayload through temporary export overlay", "httpServer": false, "providerAuthorizationExecuted": false}); err != nil {
+			panic(err)
+		}
+	}
+}

@@ -1,0 +1,8 @@
+package adapter
+
+import "net/http"
+
+func SourceEntryPrototypeParse(req *http.Request, body []byte) error {
+	_, err := parseIncomingPayload(req, body)
+	return err
+}

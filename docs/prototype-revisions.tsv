@@ -1,0 +1,14 @@
+directory	origin	branch	commit	worktree
+agent-sandbox	https://github.com/kubernetes-sigs/agent-sandbox.git	main	5d7608a9fca5aa1d3a12b73fb51ed2ee0d4e9ab1	clean
+architecture	https://github.com/konflux-ci/architecture.git	main	a51babeeae47f69f4cba98505b4d5dd66a2c73a6	clean
+build-service	https://github.com/konflux-ci/build-service.git	main	ab6a21c3186fef99888269756ae8c36ad0155b38	clean
+build-trusted-artifacts	https://github.com/konflux-ci/build-trusted-artifacts.git	main	dbbc7016f5867e204ced75a64a8ce3668723067d	clean
+conforma-cli	https://github.com/conforma/cli.git	main	d7152fd908654fd34e92f2d9cc4e2ee245f1d464	clean
+conforma-policy	https://github.com/conforma/policy.git	main	13bc0cd118e1f53be6bd48222e24b99d36a0f30e	clean
+integration-service	https://github.com/konflux-ci/integration-service.git	main	a5e72c8f7f38fef128feccdda1de53d99a6823f4	clean
+konflux-ci	https://github.com/konflux-ci/konflux-ci.git	main	858480e0f07ba58fc0f7ebb2cf2afaf11be85fb8	clean
+pipelines-as-code	https://github.com/openshift-pipelines/pipelines-as-code.git	main	81817032ba22f09db838d264fa16acc0775dc2b5	clean
+release-service	https://github.com/konflux-ci/release-service.git	main	db8370045e644e7ce92fb420a5bbcbf584d0c64d	clean
+tekton-chains	https://github.com/tektoncd/chains.git	main	0b20951e9e55cc1f0631c51ee20359f5568eb9e2	clean
+tekton-pipeline	https://github.com/tektoncd/pipeline.git	main	90b2235c66fb02d98e51c148a66725c537c805d6	clean
+tekton-results	https://github.com/tektoncd/results.git	v0.20.0	e175d25e526e9ac7221e50011d2ef3b845502002	inspected release tag; clone main c893decf6a09571547ce4837224e808e041025cf

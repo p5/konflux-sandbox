@@ -1,0 +1,28 @@
+apiVersion: konflux.konflux-ci.dev/v1alpha1
+kind: KonfluxEnterpriseContract
+metadata:
+  name: konflux-enterprise-contract
+spec:
+  skipPolicies: true
+---
+apiVersion: konflux.konflux-ci.dev/v1alpha1
+kind: KonfluxReleaseService
+metadata:
+  name: konflux-release-service
+spec:
+  debug: false
+  releaseControllerManager:
+    replicas: 1
+    manager:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 1Gi
+      env:
+      - name: DEFAULT_RELEASE_WORKSPACE_NAME
+        value: release-workspace
+      - name: DEFAULT_RELEASE_WORKSPACE_SIZE
+        value: 64Mi
